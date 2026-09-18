@@ -1,7 +1,7 @@
-﻿"""Application pipeline, approval inbox, and guest session expiry; frozen schema snapshot."""
+"""Application pipeline, approval inbox, and guest session expiry; frozen schema snapshot."""
 
 from datetime import datetime, timezone
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Table, Column, text
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Table, Column, text, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -45,24 +45,27 @@ class Approval(Base):
 
 
 def upgrade(connection):
-    # Add expires_at to workspaces (idempotent: ignore if column exists).
-    try:
-        connection.execute(text("ALTER TABLE workspaces ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE"))
-    except Exception:
-        pass  # Already exists on PostgreSQL; SQLite will re-run create_all.
-
-    # Expand applications table.
-    for col_sql in [
-        "ALTER TABLE applications ADD COLUMN mission_id TEXT REFERENCES missions(id)",
-        "ALTER TABLE applications ADD COLUMN company TEXT",
-        "ALTER TABLE applications ADD COLUMN title TEXT",
-        "ALTER TABLE applications ADD COLUMN job_url TEXT",
-        "ALTER TABLE applications ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE",
-        "ALTER TABLE applications ADD COLUMN created_at TIMESTAMP WITH TIME ZONE",
-    ]:
-        try:
-            connection.execute(text(col_sql))
-        except Exception:
-            pass
-
+    # Inspect first: catching duplicate-column errors would abort PostgreSQL's transaction.
+    additions = {
+        "workspaces": {"expires_at": "TIMESTAMP WITH TIME ZONE"},
+        "applications": {
+            "mission_id": "TEXT REFERENCES missions(id)",
+            "company": "TEXT",
+            "title": "TEXT",
+            "job_url": "TEXT",
+            "updated_at": "TIMESTAMP WITH TIME ZONE",
+            "created_at": "TIMESTAMP WITH TIME ZONE",
+        },
+    }
+    for table, columns in additions.items():
+        existing = {column["name"] for column in inspect(connection).get_columns(table)}
+        for name, definition in columns.items():
+            if name not in existing:
+                connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {definition}"))
+    connection.execute(
+        text(
+            "UPDATE applications SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP), "
+            "updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)"
+        )
+    )
     Base.metadata.create_all(connection, tables=[StageHistory.__table__, Approval.__table__])

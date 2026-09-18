@@ -161,3 +161,9 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Extended the real Temporal integration test to assert four draft artifacts and correct pipeline metadata.
 - Added scripts/smoke_workflow.py for the running web/API/worker stack.
 - Full-stack HTTP smoke passed: guest session, proxy, dispatch, retry exhaustion, checkpoint recovery, SSE replay, four cited drafts, application pipeline, and cancellation.
+
+### Checkpoint: runnable worker infrastructure
+- Finished the Compose workflow-worker service with API health dependency and worker package inclusion in the image.
+- Migration 003 now inspects existing columns instead of swallowing DDL errors; existing local-bootstrap migration adoption is tested.
+- Native API, worker, and production web build restarted on the migrated database; existing local data retained.
+- Compose configuration validates; PostgreSQL container runtime is still unverified.

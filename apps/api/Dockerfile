@@ -2,6 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY pyproject.toml ./
 COPY apps/api apps/api
+COPY services/workflow-worker services/workflow-worker
 RUN pip install --no-cache-dir .
 COPY data data
 ENV OPERATOR_DATA_DIR=/app/data/demo

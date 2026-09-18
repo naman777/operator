@@ -32,3 +32,21 @@ def test_migrations_are_repeatable(tmp_path):
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 4
     engine.dispose()
+
+
+def test_migrations_adopt_existing_local_bootstrap(tmp_path):
+    from operator_api.db import Base
+
+    root = Path(__file__).resolve().parents[2]
+    url = f"sqlite:///{tmp_path / 'bootstrap.db'}"
+    engine = create_engine(url)
+    Base.metadata.create_all(engine)
+    subprocess.run(
+        [sys.executable, str(root / "scripts/migrate.py")],
+        env={**os.environ, "DATABASE_URL": url},
+        check=True,
+        capture_output=True,
+    )
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 4
+    engine.dispose()

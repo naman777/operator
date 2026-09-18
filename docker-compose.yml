@@ -17,7 +17,7 @@ services:
     image: redis:7-alpine
     ports: ["127.0.0.1:6379:6379"]
   temporal:
-    image: temporalio/temporal:1.4.1
+    image: temporalio/temporal:1.9.1
     command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/var/lib/temporal/temporal.db"]
     ports: ["127.0.0.1:7233:7233", "127.0.0.1:8233:8233"]
     volumes: ["temporal-data:/var/lib/temporal"]
@@ -39,6 +39,25 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  workflow-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["python", "-m", "operator_worker.main"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://operator:operator_local@postgres:5432/operator
+      TEMPORAL_ADDRESS: temporal:7233
+    restart: on-failure
+    depends_on:
+      api:
+        condition: service_healthy
+      temporal:
+        condition: service_started
   web:
     build:
       context: .
