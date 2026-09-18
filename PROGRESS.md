@@ -185,7 +185,7 @@ Documentation updated with current startup commands, accurate limitations, and t
 - Added bounded plain-text document ingestion, checksum deduplication, line/character provenance, exact skill detection, and evidence listing.
 - Workflow planning snapshots the workspace profile; retries reuse the same candidate context.
 - Added migration 005, generated contracts, and profile correction/ingestion UI.
-- Pending: PDF/DOCX ingestion, automatic structured education/history parsing, embeddings, real extraction, model matching, durable approval waits, and deployment. Plain-text ingestion appends to demo evidence; it does not silently replace the synthetic candidate.
+- Pending: PDF/DOCX ingestion, automatic structured education/history parsing, embeddings, browser extraction, model matching, durable approval waits, and deployment. Plain-text ingestion appends to demo evidence; it does not silently replace the synthetic candidate.
 
 - Profile checkpoint validation: 38 Python tests passed including isolated live Temporal; frontend typecheck and production build passed.
 
@@ -203,3 +203,12 @@ Documentation updated with current startup commands, accurate limitations, and t
 - Backend checkpoint: `d17ecb8`. Profile checkpoints: `6c97e3e` and `e56a977`.
 
 - Public import UI validation: four frontend tests, typecheck, formatting and production build passed. Import selection preserves the successfully retrieved URL even if the input changes afterward. Visual browser testing remains unverified.
+
+
+### Continuation checkpoint map
+- `6c97e3e`: persistent versioned profiles and source evidence.
+- `e56a977`: profile correction and resume evidence UI.
+- `d17ecb8`: guarded public job snapshot ingestion and workflow integration.
+- `2695773`: public import UI and source-aware inspector.
+
+Native database backed up before migrations 005/006; API, worker and dashboard restarted. Full-stack HTTP smoke passed (guest session, dispatch, retry recovery, SSE, four cited drafts, pipeline and cancellation). Local dashboard: http://127.0.0.1:3000. No changes pushed or deployed.

@@ -10,7 +10,7 @@ flowchart LR
   API --> DB[(Product database)]
   DB --> Outbox[Dispatch commands]
   Outbox --> Temporal[Temporal]
-  Temporal --> Worker[Bounded fixture activities]
+  Temporal --> Worker[Checkpointed evidence activities]
   Worker --> DB
   DB --> SSE[Authenticated event replay]
   SSE --> UI
@@ -32,4 +32,9 @@ Generated drafts are version 1 and are not sent or submitted. Revision editing, 
 
 Random bearer tokens are hashed at rest. Guest sessions expire after 24 hours; reset rotates the token in the same workspace. It is not a destructive workspace-data reset. Account authentication, rate limiting, and public-deployment hardening remain pending.
 
-Four ordered migrations define foundation tables, dispatch/checkpoint storage, pipeline/approvals, and artifacts. They run transactionally; PostgreSQL uses an advisory lock. Migration 003 inspects existing columns before adding them, avoiding transaction-aborting duplicate-column errors on bootstrapped databases. Migration 004 works with SQLite and PostgreSQL syntax; only SQLite runtime is currently verified.
+Six ordered migrations define foundation tables, dispatch/checkpoint storage, pipeline/approvals, artifacts, workspace profiles/documents, and imported job snapshots. They run transactionally; PostgreSQL uses an advisory lock. Migration 003 inspects existing columns before adding them, avoiding transaction-aborting duplicate-column errors on bootstrapped databases. Migration 004 works with SQLite and PostgreSQL syntax; only SQLite runtime is currently verified.
+
+
+Workspace profile updates use optimistic versions and immutable evidence. Plain-text ingestion deduplicates checksums and records line/character provenance. Planning snapshots both profile and job to keep retries stable after corrections or new imports.
+
+Public ingestion uses static JobPosting JSON-LD, with raw HTML snapshots and explicit requirement excerpts. HTTPS transport rejects private/reserved DNS answers, pins the selected public IP with hostname-verified TLS, and revalidates redirects. Limits cover response bytes, redirect count, socket timeouts and a retrieval deadline; OS DNS resolution is not independently bounded. Imported requirements default to required and need review. Browser screenshots, semantic matching, and inferred hard constraints are pending.

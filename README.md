@@ -2,9 +2,9 @@
 
 A personal work execution agent, starting with evidence-backed opportunity analysis.
 
-**Current build: durable synthetic opportunity workflow.** Open a guest workspace, select a sample job, run an analysis, inspect live events and evidence, simulate failures, retry from checkpoints, and review four cited application drafts. Completed sample runs update the local application pipeline.
+**Current build: durable opportunity analysis with profile evidence and public job snapshots.** Open a guest workspace, correct your profile, ingest plain-text resume evidence, import a supported HTTPS JobPosting page, and inspect live analysis and four cited application drafts. Sample jobs remain available for demos.
 
-The current matcher and drafts are deterministic templates using synthetic fixtures. Public-page extraction, profile ingestion, embeddings, LLM matching, durable approval signals, and measured model evaluations remain pending. The approval inbox can list/resolve stored approvals, but it does not yet gate workflow execution. See [PROGRESS.md](PROGRESS.md).
+Matching and drafts use deterministic rules/templates. Resume ingestion appends to demo evidence; correct candidate details manually. Public extraction supports a single static JSON-LD JobPosting and preserves the raw snapshot. PDF/DOCX parsing, browser extraction, embeddings, semantic model matching, durable approval signals, and model evaluations remain pending. The approval inbox resolves stored rows but does not gate execution. See [PROGRESS.md](PROGRESS.md).
 
 ## Local setup
 
@@ -79,11 +79,11 @@ With all four services running, execute `python scripts/smoke_workflow.py` to te
 
 - `apps/web`: Next.js dashboard, live inspector, pipeline, approval inbox, and artifact viewer.
 - `apps/api`: contracts, workspace authorization, persistence, streaming, and artifact generation.
-- `services/workflow-worker`: Temporal workflow, dispatch, activities, fixture matching, and eligibility.
+- `services/workflow-worker`: Temporal workflow, dispatch, activities, checkpointed matching, profile/job snapshots, and eligibility.
 - `packages/contracts`: generated JSON Schema, OpenAPI, and TypeScript declarations.
 - `data/demo`: synthetic candidate and three job snapshots.
 - `infra/migrations`: versioned schema upgrades.
 - `tests`: authorization, idempotency, migrations, provenance, and live workflow recovery.
 - `docs`: architecture, threat model, and demo instructions.
 
-No model keys are needed. Arbitrary job URLs can be saved but cannot execute yet. No external actions are performed. Public deployment requires additional authentication, rate limits, durable approval enforcement, and the remaining security work in the plan.
+No model keys are needed. Import a supported job page in Opportunities before executing its mission. Unsupported pages fail explicitly. No external actions are performed. Public deployment requires additional authentication, rate limits, durable approval enforcement, and the remaining security work in the plan.
