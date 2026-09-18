@@ -3,7 +3,7 @@
 Updated: 2026-09-18
 
 ## Current milestone
-First-sprint foundation implemented and locally validated. Overall project remains in Phase 1; the agent workflow has not been implemented.
+Foundation complete; now implementing the next workflow slice: transactional outbox, Temporal fixture execution, durable checkpoints, cancellation/retry, and live event inspection.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -98,3 +98,13 @@ Remaining foundation tasks: Auth.js account sessions, expiring/resettable guest 
 | `98c2306` | Infrastructure | Docker stack and CI quality checks |
 
 The documentation checkpoint records setup instructions, architecture, safety boundaries, and this progress log. These initial commits separate the already-built foundation into reviewable modules; subsequent work will be committed as each module reaches a useful checkpoint.
+
+## Active implementation session
+- In progress: workflow persistence and dispatch module, followed by Temporal execution and live inspector.
+- Scope: synthetic sample jobs only; no external fetching, model usage, or external side effects in this checkpoint.
+
+### Checkpoint: durable workflow persistence
+- Completed: transactional dispatch commands, run generations, stored step outputs, mission start/retry/cancel/failure-simulation APIs, and run inspection contract.
+- Cancellation rejects late writes; retries retain completed outputs; duplicate starts share one outbox entry.
+- Added migration 002 and regenerated frontend contracts.
+- Validation: 11 integration tests passed; Ruff passed. Temporal delivery is the next module and is not running yet.

@@ -84,6 +84,38 @@ class Application(Base):
     fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class MissionRun(Base):
+    __tablename__ = "mission_runs"
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), primary_key=True)
+    run_number: Mapped[int] = mapped_column(Integer, default=1)
+    failure_remaining: Mapped[int] = mapped_column(Integer, default=0)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class StepOutput(Base):
+    __tablename__ = "step_outputs"
+    step_id: Mapped[str] = mapped_column(ForeignKey("mission_steps.id"), primary_key=True)
+    output: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class DispatchCommand(Base):
+    __tablename__ = "dispatch_commands"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), index=True)
+    workflow_id: Mapped[str] = mapped_column(String)
+    command: Mapped[str] = mapped_column(String)
+    run_number: Mapped[int] = mapped_column(Integer)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 def database(url=None):
     url = url or os.getenv("DATABASE_URL", "sqlite:///./operator.db")
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})

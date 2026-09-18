@@ -11,6 +11,7 @@ class Contract(BaseModel):
 
 class MissionStatus(StrEnum):
     draft = "draft"
+    queued = "queued"
     planning = "planning"
     extracting = "extracting"
     researching = "researching"
@@ -120,3 +121,27 @@ class EventView(Contract):
     type: str
     payload: dict
     created_at: datetime
+
+
+class FailureSimulation(Contract):
+    mode: Literal["transient", "exhausted"] = "transient"
+
+
+class StepView(Contract):
+    id: str
+    name: str
+    status: Literal["pending", "running", "completed", "failed", "cancelled"]
+    attempt: int
+    output: dict | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    latency_ms: int | None = None
+    error: str | None = None
+
+
+class RunView(Contract):
+    mission: MissionView
+    execution_mode: Literal["synthetic-fixture"] = "synthetic-fixture"
+    run_number: int
+    steps: list[StepView]
+    result: MissionResult | None = None

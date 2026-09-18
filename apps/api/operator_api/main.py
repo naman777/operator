@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session
 from .logging_config import configure_logging
 from .db import Base, Event, Mission, Workspace, database
 from .schemas import (
+    FailureSimulation,
+    RunView,
     CandidateProfile,
     EventView,
     GuestSession,
@@ -24,6 +26,8 @@ from .schemas import (
     MissionView,
     WorkspaceView,
 )
+
+from . import runtime
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -87,7 +91,7 @@ def create_app(database_url=None):
     def health():
         with engine.connect() as conn:
             conn.exec_driver_sql("SELECT 1")
-        return {"status": "ok", "execution_mode": "draft-only"}
+        return {"status": "ok", "execution_mode": "synthetic-fixture"}
 
     @app.post("/v1/guest-sessions", response_model=GuestSession, status_code=201)
     def guest(db: DB, response: Response):
@@ -162,7 +166,7 @@ def create_app(database_url=None):
                     type="mission.created",
                     payload={
                         "status": "draft",
-                        "message": "Mission saved. Execution worker is not connected yet.",
+                        "message": "Mission saved. Start a sample run when ready.",
                     },
                 )
             )
@@ -193,6 +197,36 @@ def create_app(database_url=None):
             .where(Event.mission_id == mission_id, Event.sequence > after)
             .order_by(Event.sequence)
         ).all()
+
+    def control(mission_id, db, ws, action):
+        get_owned(db, ws, mission_id)
+        try:
+            result = action()
+            db.commit()
+            return result
+        except runtime.StateConflict as exc:
+            db.rollback()
+            raise HTTPException(409, str(exc)) from exc
+
+    @app.post("/v1/missions/{mission_id}/start", response_model=MissionView, status_code=202)
+    def start(mission_id: str, db: DB, ws: WS):
+        return control(mission_id, db, ws, lambda: runtime.start_mission(db, mission_id))
+
+    @app.post("/v1/missions/{mission_id}/retry", response_model=MissionView, status_code=202)
+    def retry(mission_id: str, db: DB, ws: WS):
+        return control(mission_id, db, ws, lambda: runtime.start_mission(db, mission_id, retry=True))
+
+    @app.post("/v1/missions/{mission_id}/cancel", response_model=MissionView)
+    def cancel(mission_id: str, db: DB, ws: WS):
+        return control(mission_id, db, ws, lambda: runtime.cancel_mission(db, mission_id))
+
+    @app.post("/v1/missions/{mission_id}/simulate-failure", response_model=MissionView)
+    def simulate(mission_id: str, body: FailureSimulation, db: DB, ws: WS):
+        return control(mission_id, db, ws, lambda: runtime.simulate_failure(db, mission_id, body.mode))
+
+    @app.get("/v1/missions/{mission_id}/run", response_model=RunView)
+    def run(mission_id: str, db: DB, ws: WS):
+        return runtime.run_view(db, get_owned(db, ws, mission_id))
 
     return app
 
