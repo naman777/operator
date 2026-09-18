@@ -1,0 +1,18 @@
+{
+  "name": "operator",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "dev": "pnpm --filter @operator/web dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "contracts": "python scripts/export_contracts.py && openapi-typescript packages/contracts/openapi.json -o packages/contracts/src/api.d.ts",
+    "format": "prettier --write \"apps/web/**/*.{ts,tsx,css,json}\"",
+    "format:check": "prettier --check \"apps/web/**/*.{ts,tsx,css,json}\""
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1",
+    "prettier": "^3.9.8",
+    "turbo": "^2.5.0"
+  }
+}

@@ -1,0 +1,4 @@
+node_modules
+.next
+.turbo
+apps/web/next-env.d.ts
