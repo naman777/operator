@@ -3,7 +3,7 @@
 Updated: 2026-09-18
 
 ## Current milestone
-Application pipeline and approval inbox implemented; next slice is connecting the frontend run inspector to live step-level SSE events and starting Phase 4 (profile ingestion, real embeddings, deterministic eligibility checks, and structured LLM matching).
+Durable synthetic workflow, live inspector, explicit eligibility checks, and four cited application drafts are implemented and validated. Next: workspace profile ingestion and guarded real job extraction, followed by structured model matching and durable approvals.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -38,11 +38,11 @@ Application pipeline and approval inbox implemented; next slice is connecting th
 - Added 5 integration tests for pipeline and approval endpoints.
 
 ## Validation performed
-- Python integration tests: **17 passed** (pipeline list, stage patch, expiry, reset, cross-workspace isolation, streaming replay, cursor validation, runtime checkpoints, cancellation, idempotency, migrations).
+- Python tests: **36 passed**, including a real isolated Temporal server, mid-run worker restart, retries, artifact provenance and replay, concurrent pipeline writes, authorization, and migrations.
 - Ruff checks: passed for API, scripts, tests, and migration.
 - Frontend formatting check: passed.
 - TypeScript type checking: passed (enforced by Next.js build).
-- Next.js production build: compiled successfully in 3.1s.
+- Next.js production build: passed. Four frontend SSE parser/replay tests also passed.
 - Docker Compose configuration parsing: passed.
 - No model-quality metrics or workflow-completion metrics have been measured.
 
@@ -50,9 +50,9 @@ Application pipeline and approval inbox implemented; next slice is connecting th
 Phase 4 is next:
 1. Profile ingestion: parse resume into structured education, skills, experience, dates, and preferences.
 2. Chunk and embed evidence with provenance (pgvector).
-3. Implement deterministic eligibility checks (graduation year, location, authorization, experience bounds).
-4. Implement requirement-to-evidence matrix with transparent weighted fit score.
-5. Generate versioned artifacts: resume change set, cover letter, recruiter message, interview brief.
+3. Feed real, source-backed job constraints and ingested profile data into the implemented deterministic eligibility checks.
+4. Replace exact fixture skill matching with structured semantic matching while preserving the reproducible score and evidence matrix.
+5. Extend the implemented cited template drafts with controlled model drafting and immutable revisions.
 6. Add artifact diff view and citation viewer.
 
 Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, and complete local-stack validation.
@@ -72,19 +72,21 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 | 10. Store/render real workflow result | Done (fixture); pending LLM-backed result |
 | 11. Application pipeline backend + frontend | Done |
 | 12. Approval inbox backend + frontend | Done |
-| 13. Guest session expiry and reset | Done |
+| 13. Guest session expiry and reset | Done (token rotation, not data deletion) |
+| 14. Evidence-backed artifact drafts and viewer | Done (synthetic templates, version 1) |
+| 15. Explicit deterministic eligibility | Done; real extraction of constraints pending |
 
 ## Later phases
 - Real Playwright extraction replacing fixture HTML.
 - Agents SDK structured LLM matching, eligibility, and report generation.
 - Durable Temporal approval signals (currently: immediate database writes only).
-- Artifact generation/versioning and diff view.
+- Artifact revision editing, diffs, and model-generated drafting (cited template drafts are implemented).
 - MCP server, mock calendar/email-draft connectors, and shared authorization policies.
 - Public-deployment security controls, rate limits, budget enforcement, and failure simulation.
 - Measured evaluation suite/dashboard, tracing, deployment, and recruiter polish.
 
 ## Blockers and limitations
-- Docker CLI is installed, but its configured daemon at 127.0.0.1:8888 is unreachable; full container startup and PostgreSQL/Temporal integration remain unverified.
+- Docker CLI is installed, but its configured daemon at 127.0.0.1:8888 is unreachable; full container startup and PostgreSQL runtime integration remain unverified. Native Temporal integration is verified.
 - Browser automation reported no available browser; visual rendering and click-through testing remain unverified. HTTP smoke tests are not a substitute for browser E2E tests.
 - Guest credentials expire after 24 h; this build is local-only and must not be deployed publicly.
 - Arbitrary job URLs are saved only; no real page fetches, model calls, or external actions in this build.
@@ -148,3 +150,14 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Artifact and eligibility views now use generated API types; drafts show actual counts, review status, stored evidence citations, and required/candidate values.
 - Added loading/error handling for artifact requests and clipboard feedback, plus stable selection by artifact ID.
 - Validation: four frontend stream tests, TypeScript checks, and Next.js production build passed. Visual click-through remains unverified because no browser automation surface is available.
+
+### Final validation for this continuation
+- All 36 Python tests passed, including isolated live Temporal execution with artifact and pipeline assertions.
+- Four frontend SSE tests, type checks, production build, and Ruff passed.
+- Native development database backed up under ignored .local/backups before applying migrations 003 and 004.
+- Full Docker execution and visual browser testing remain unverified; Compose syntax validates.
+
+### Checkpoint: live artifact validation
+- Extended the real Temporal integration test to assert four draft artifacts and correct pipeline metadata.
+- Added scripts/smoke_workflow.py for the running web/API/worker stack.
+- Full-stack HTTP smoke passed: guest session, proxy, dispatch, retry exhaustion, checkpoint recovery, SSE replay, four cited drafts, application pipeline, and cancellation.

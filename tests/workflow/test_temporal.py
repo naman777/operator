@@ -13,7 +13,16 @@ from temporalio.client import Client
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from operator_api.db import DispatchCommand, Event, Mission, MissionRun, MissionStep, database
+from operator_api.db import (
+    Artifact,
+    Application,
+    DispatchCommand,
+    Event,
+    Mission,
+    MissionRun,
+    MissionStep,
+    database,
+)
 from operator_api.main import create_app
 from operator_worker.activities import Activities
 from operator_worker.dispatcher import dispatch_once
@@ -91,6 +100,13 @@ async def run_scenarios(tmp_path):
                 assert (await result(mid))["status"] == "completed"
                 with sessions() as db:
                     assert db.get(MissionRun, mid).result["score"] == 100
+                    assert len(db.get(MissionRun, mid).result["artifact_ids"]) == 4
+                    drafts = db.scalars(select(Artifact).where(Artifact.mission_id == mid)).all()
+                    assert len(drafts) == 4 and all(draft.status == "draft" for draft in drafts)
+                    assert (
+                        db.scalar(select(Application).where(Application.mission_id == mid)).company
+                        == "Northstar"
+                    )
                     steps = db.scalars(select(MissionStep).where(MissionStep.mission_id == mid)).all()
                     assert next(s for s in steps if s.name == "matching").attempt == 2
                 # Simulate crash after Temporal accepted a start but before the outbox acknowledgement.
