@@ -16,11 +16,24 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .logging_config import configure_logging
-from .db import APPLICATION_STAGES, Approval, Application, Base, Event, Mission, StageHistory, Workspace, database, utcnow
+from .db import (
+    APPLICATION_STAGES,
+    Approval,
+    Application,
+    Artifact,
+    Base,
+    Event,
+    Mission,
+    StageHistory,
+    Workspace,
+    database,
+    utcnow,
+)
 from .schemas import (
     ApprovalResolution,
     ApprovalView,
     ApplicationView,
+    ArtifactView,
     FailureSimulation,
     RunView,
     CandidateProfile,
@@ -86,6 +99,7 @@ def create_app(database_url=None):
             raise HTTPException(401, "Invalid guest session")
         if found.expires_at:
             from datetime import timezone as _tz
+
             exp = found.expires_at
             if exp.tzinfo is None:
                 exp = exp.replace(tzinfo=_tz.utc)
@@ -299,13 +313,15 @@ def create_app(database_url=None):
         old_stage = app.stage
         app.stage = body.stage
         app.updated_at = utcnow()
-        db.add(StageHistory(
-            id=str(uuid4()),
-            application_id=app.id,
-            from_stage=old_stage,
-            to_stage=body.stage,
-            note=body.note,
-        ))
+        db.add(
+            StageHistory(
+                id=str(uuid4()),
+                application_id=app.id,
+                from_stage=old_stage,
+                to_stage=body.stage,
+                note=body.note,
+            )
+        )
         db.commit()
         return app
 
@@ -321,9 +337,7 @@ def create_app(database_url=None):
         return db.scalars(stmt.order_by(Approval.created_at.desc())).all()
 
     def get_approval(db, ws, approval_id):
-        found = db.scalar(
-            select(Approval).where(Approval.id == approval_id, Approval.workspace_id == ws.id)
-        )
+        found = db.scalar(select(Approval).where(Approval.id == approval_id, Approval.workspace_id == ws.id))
         if not found:
             raise HTTPException(404, "Approval not found")
         return found
@@ -335,6 +349,7 @@ def create_app(database_url=None):
             raise HTTPException(409, "Approval is no longer pending")
         if approval.expires_at:
             from datetime import timezone as _tz
+
             exp = approval.expires_at
             if exp.tzinfo is None:
                 exp = exp.replace(tzinfo=_tz.utc)
@@ -356,6 +371,26 @@ def create_app(database_url=None):
         approval.resolved_by = "user"
         db.commit()
         return approval
+
+    # ---------------------------------------------------------------------------
+    # Artifacts
+    # ---------------------------------------------------------------------------
+
+    @app.get("/v1/missions/{mission_id}/artifacts", response_model=list[ArtifactView])
+    def mission_artifacts(mission_id: str, db: DB, ws: WS):
+        get_owned(db, ws, mission_id)
+        return db.scalars(
+            select(Artifact)
+            .where(Artifact.mission_id == mission_id, Artifact.workspace_id == ws.id)
+            .order_by(Artifact.created_at)
+        ).all()
+
+    @app.get("/v1/artifacts/{artifact_id}", response_model=ArtifactView)
+    def artifact(artifact_id: str, db: DB, ws: WS):
+        found = db.scalar(select(Artifact).where(Artifact.id == artifact_id, Artifact.workspace_id == ws.id))
+        if not found:
+            raise HTTPException(404, "Artifact not found")
+        return found
 
     return app
 

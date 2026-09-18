@@ -5,8 +5,22 @@ from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy import func, select, update
-from .db import Application, DispatchCommand, Event, Mission, MissionRun, MissionStep, Opportunity, StageHistory, StepOutput, utcnow
+from .db import (
+    Application,
+    Artifact,
+    DispatchCommand,
+    Event,
+    Mission,
+    MissionRun,
+    MissionStep,
+    Opportunity,
+    StageHistory,
+    StepOutput,
+    Workspace,
+    utcnow,
+)
 from .schemas import CandidateProfile, JobPosting
+from .artifacts import prepare as prepare_artifacts
 
 STEP_NAMES = ("planning", "extracting", "matching", "verifying", "generating")
 TERMINAL = {"completed", "failed", "cancelled"}
@@ -167,7 +181,7 @@ def begin_step(sessions, mission_id, run_number, name):
     with sessions.begin() as db:
         mission = lock_mission(db, mission_id)
         run = db.get(MissionRun, mission_id)
-        if mission.status in TERMINAL or not run or run.run_number != run_number:
+        if mission.status in {"cancelled", "failed"} or not run or run.run_number != run_number:
             return {"stopped": True}
         step = db.scalar(
             select(MissionStep).where(MissionStep.mission_id == mission_id, MissionStep.name == name)
@@ -175,6 +189,8 @@ def begin_step(sessions, mission_id, run_number, name):
         output = db.get(StepOutput, step.id)
         if step.status == "completed":
             return {"cached": output.output}
+        if mission.status == "completed":
+            return {"stopped": True}
         step.status = "running"
         step.attempt += 1
         output.started_at = utcnow()
@@ -199,7 +215,7 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
     with sessions.begin() as db:
         mission = lock_mission(db, mission_id)
         run = db.get(MissionRun, mission_id)
-        if mission.status in TERMINAL or run.run_number != run_number:
+        if mission.status in {"cancelled", "failed"} or not run or run.run_number != run_number:
             return {"stopped": True}
         step = db.scalar(
             select(MissionStep).where(MissionStep.mission_id == mission_id, MissionStep.name == name)
@@ -207,6 +223,74 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
         output = db.get(StepOutput, step.id)
         if step.status == "completed":
             return output.output
+        if mission.status == "completed":
+            return {"stopped": True}
+        if name == "generating":
+            report, job, drafts = prepare_artifacts(db, mission_id, payload)
+            # Serialize pipeline upserts for different missions targeting the same workspace/job.
+            db.execute(
+                update(Workspace).where(Workspace.id == mission.workspace_id).values(name=Workspace.name)
+            )
+            opportunity = db.scalar(
+                select(Opportunity).where(
+                    Opportunity.url == mission.job_url, Opportunity.workspace_id == mission.workspace_id
+                )
+            )
+            if opportunity is None:
+                opportunity = Opportunity(
+                    id=str(uuid4()),
+                    workspace_id=mission.workspace_id,
+                    title=job.title,
+                    company=job.company,
+                    url=mission.job_url,
+                )
+                db.add(opportunity)
+                db.flush()
+            else:
+                opportunity.title, opportunity.company = job.title, job.company
+            application = db.scalar(
+                select(Application).where(
+                    Application.workspace_id == mission.workspace_id,
+                    Application.opportunity_id == opportunity.id,
+                )
+            )
+            if application is None:
+                application = Application(
+                    id=str(uuid4()),
+                    workspace_id=mission.workspace_id,
+                    opportunity_id=opportunity.id,
+                    stage="saved",
+                )
+                db.add(application)
+                db.flush()
+                db.add(
+                    StageHistory(
+                        id=str(uuid4()),
+                        application_id=application.id,
+                        from_stage=None,
+                        to_stage="saved",
+                        note="Created from completed sample mission",
+                    )
+                )
+            application.mission_id = mission_id
+            application.fit_score = report.score
+            application.company, application.title = job.company, job.title
+            application.job_url, application.updated_at = mission.job_url, utcnow()
+            artifact_ids = []
+            for artifact_type, content in drafts.items():
+                artifact = Artifact(
+                    id=str(uuid4()),
+                    mission_id=mission_id,
+                    workspace_id=mission.workspace_id,
+                    type=artifact_type,
+                    version=1,
+                    content=content.model_dump(mode="json"),
+                    status="draft",
+                )
+                db.add(artifact)
+                artifact_ids.append(artifact.id)
+            payload = report.model_copy(update={"artifact_ids": artifact_ids}).model_dump(mode="json")
+            run.result = payload
         output.output = payload
         output.completed_at = utcnow()
         output.latency_ms = latency_ms
@@ -224,56 +308,7 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
             },
         )
         if name == "generating":
-            run.result = payload
             mission.status = "completed"
-            # Upsert an application in the pipeline.
-            opportunity = db.scalar(
-                select(Opportunity).where(Opportunity.url == mission.job_url)
-            )
-            if opportunity is None:
-                opportunity = Opportunity(
-                    id=str(uuid4()),
-                    workspace_id=mission.workspace_id,
-                    title=payload.get("job_title", "Unknown role"),
-                    company=payload.get("company", "Unknown company"),
-                    url=mission.job_url,
-                )
-                db.add(opportunity)
-                db.flush()
-            existing_app = db.scalar(
-                select(Application).where(
-                    Application.workspace_id == mission.workspace_id,
-                    Application.opportunity_id == opportunity.id,
-                )
-            )
-            if existing_app is None:
-                app = Application(
-                    id=str(uuid4()),
-                    workspace_id=mission.workspace_id,
-                    opportunity_id=opportunity.id,
-                    mission_id=mission.id,
-                    stage="saved",
-                    fit_score=payload.get("score"),
-                    company=opportunity.company,
-                    title=opportunity.title,
-                    job_url=mission.job_url,
-                )
-                db.add(app)
-                db.flush()
-                db.add(
-                    StageHistory(
-                        id=str(uuid4()),
-                        application_id=app.id,
-                        from_stage=None,
-                        to_stage="saved",
-                        note="Created from completed mission",
-                    )
-                )
-            else:
-                if payload.get("score") is not None:
-                    existing_app.fit_score = payload["score"]
-                    existing_app.mission_id = mission.id
-                    existing_app.updated_at = utcnow()
             record_event(
                 db,
                 mission,
@@ -283,6 +318,8 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
                     "execution_mode": "synthetic-fixture",
                     "model_calls": 0,
                     "cost_usd": 0,
+                    "artifact_ids": payload["artifact_ids"],
+                    "artifact_status": "draft",
                 },
             )
         return payload

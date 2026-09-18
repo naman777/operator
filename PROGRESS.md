@@ -134,3 +134,11 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Missing requirements stay unknown; remote preference no longer passes every on-site location. No graduation cutoff is inferred from a job title.
 - Verification now checks eligibility explanations against reproduced results.
 - Preserved the expanded synthetic profile. Validation: 12 analysis/eligibility tests passed.
+
+### Checkpoint: evidence-backed draft artifacts
+- Finished cover-letter, resume-suggestion, recruiter-message, and interview-brief drafts from completed extraction/matching/verification checkpoints.
+- Draft claims quote stored evidence and carry source citations; unsupported example metrics and requirement-ID-derived skill names were removed.
+- Persisted artifact IDs in both the report and generating-step output; atomic completion rolls back invalid reports.
+- Added a unique artifact version index, repaired SQLite migration 004, and preserved completion results across acknowledgement replay.
+- Pipeline upserts use real stored company/title fields, workspace-scoped opportunities, and a workspace lock for concurrent missions.
+- Validation: 34 Python tests passed, one live Temporal test pending; includes four artifact integration tests and repeatable migrations.
