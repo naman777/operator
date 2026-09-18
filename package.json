@@ -8,7 +8,8 @@
     "typecheck": "turbo typecheck",
     "contracts": "python scripts/export_contracts.py && openapi-typescript packages/contracts/openapi.json -o packages/contracts/src/api.d.ts",
     "format": "prettier --write \"apps/web/**/*.{ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"apps/web/**/*.{ts,tsx,css,json}\""
+    "format:check": "prettier --check \"apps/web/**/*.{ts,tsx,css,json}\"",
+    "test:web": "pnpm --filter @operator/web test"
   },
   "devDependencies": {
     "openapi-typescript": "^7.6.1",

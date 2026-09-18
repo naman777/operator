@@ -34,7 +34,14 @@ const STAGE_LABELS: Record<string, string> = {
   rejected: "Rejected",
 };
 
-const STATUS_RUNNING = new Set(["queued", "planning", "extracting", "matching", "verifying", "generating"]);
+const STATUS_RUNNING = new Set([
+  "queued",
+  "planning",
+  "extracting",
+  "matching",
+  "verifying",
+  "generating",
+]);
 
 export default function Home() {
   const [token, setToken] = useState("");
@@ -109,9 +116,15 @@ export default function Home() {
     const controller = new AbortController();
     const timer = setInterval(() => {
       Promise.all([
-        request<Mission[]>("/v1/missions", token, { signal: controller.signal }),
-        request<Application[]>("/v1/applications", token, { signal: controller.signal }),
-        request<Approval[]>("/v1/approvals", token, { signal: controller.signal }),
+        request<Mission[]>("/v1/missions", token, {
+          signal: controller.signal,
+        }),
+        request<Application[]>("/v1/applications", token, {
+          signal: controller.signal,
+        }),
+        request<Approval[]>("/v1/approvals", token, {
+          signal: controller.signal,
+        }),
       ])
         .then(([m, apps, apv]) => {
           if (!controller.signal.aborted) {
@@ -190,7 +203,10 @@ export default function Home() {
       setError((e as Error).message);
     }
   }
-  async function resolveApproval(approvalId: string, action: "approve" | "reject") {
+  async function resolveApproval(
+    approvalId: string,
+    action: "approve" | "reject",
+  ) {
     try {
       await api<Approval>(`/v1/approvals/${approvalId}/${action}`, token, {
         method: "POST",
@@ -202,7 +218,9 @@ export default function Home() {
       setError((e as Error).message);
     }
   }
-  const pendingApprovals = approvals.filter((a) => a.status === "pending").length;
+  const pendingApprovals = approvals.filter(
+    (a) => a.status === "pending",
+  ).length;
   return (
     <div className="app">
       <aside>
@@ -413,7 +431,9 @@ export default function Home() {
                         <strong>{m.goal}</strong>
                         <small>{m.job_url}</small>
                       </span>
-                      <span className={`tag status-${m.status}`}>{m.status}</span>
+                      <span className={`tag status-${m.status}`}>
+                        {m.status}
+                      </span>
                       <span>◇</span>
                     </button>
                   ))
@@ -472,6 +492,27 @@ export default function Home() {
                 Class of {profile?.graduation_year} ·{" "}
                 {profile?.locations.join(" / ")}
               </p>
+              {(profile as any).experience_years !== undefined && (
+                <p className="muted">
+                  Experience: {(profile as any).experience_years} years ·
+                  Authorization:{" "}
+                  {(
+                    ((profile as any).work_authorization as string[]) ?? []
+                  ).join(", ") || "Not specified"}
+                </p>
+              )}
+              {(((profile as any).employment_type_preference as string[]) ?? [])
+                .length > 0 && (
+                <div className="samples" style={{ marginBottom: 14 }}>
+                  {(
+                    (profile as any).employment_type_preference as string[]
+                  ).map((pref: string) => (
+                    <span className="tag" key={pref}>
+                      {pref}
+                    </span>
+                  ))}
+                </div>
+              )}
               <h3>Candidate evidence</h3>
               {profile?.evidence.map((e) => (
                 <div className="evidence" key={e.id}>
@@ -488,13 +529,17 @@ export default function Home() {
               <div className="stats">
                 <div>
                   <small>TOTAL APPLICATIONS</small>
-                  <strong>{applications.length.toString().padStart(2, "0")}</strong>
+                  <strong>
+                    {applications.length.toString().padStart(2, "0")}
+                  </strong>
                   <span>Across all stages</span>
                 </div>
                 <div>
                   <small>ACTIVE STAGE</small>
                   <strong className="stat-text">
-                    {applications.filter((a) => a.stage === "applied" || a.stage === "interview").length > 0
+                    {applications.filter(
+                      (a) => a.stage === "applied" || a.stage === "interview",
+                    ).length > 0
                       ? "In Progress"
                       : "Saved"}
                   </strong>
@@ -502,7 +547,12 @@ export default function Home() {
                 </div>
                 <div>
                   <small>OFFERS</small>
-                  <strong>{applications.filter((a) => a.stage === "offer").length.toString().padStart(2, "0")}</strong>
+                  <strong>
+                    {applications
+                      .filter((a) => a.stage === "offer")
+                      .length.toString()
+                      .padStart(2, "0")}
+                  </strong>
                   <span>Received</span>
                 </div>
               </div>
@@ -528,7 +578,9 @@ export default function Home() {
                     <section className="panel pipeline-card" key={app.id}>
                       <div className="panel-title">
                         <div>
-                          <span className="avatar">{(app.company ?? "?")[0]}</span>
+                          <span className="avatar">
+                            {(app.company ?? "?")[0]}
+                          </span>
                         </div>
                         <span className={`tag pipeline-stage-${app.stage}`}>
                           {STAGE_LABELS[app.stage] ?? app.stage}
@@ -537,16 +589,19 @@ export default function Home() {
                       <p className="eyebrow" style={{ marginTop: 14 }}>
                         {app.company ?? "Unknown company"}
                       </p>
-                      <h2 style={{ fontSize: 15 }}>{app.title ?? "Unknown role"}</h2>
-                      {app.fit_score !== null && app.fit_score !== undefined && (
-                        <p className="muted" style={{ fontSize: 12 }}>
-                          Fit score:{" "}
-                          <strong style={{ color: "var(--green)" }}>
-                            {app.fit_score}
-                          </strong>{" "}
-                          / 100
-                        </p>
-                      )}
+                      <h2 style={{ fontSize: 15 }}>
+                        {app.title ?? "Unknown role"}
+                      </h2>
+                      {app.fit_score !== null &&
+                        app.fit_score !== undefined && (
+                          <p className="muted" style={{ fontSize: 12 }}>
+                            Fit score:{" "}
+                            <strong style={{ color: "var(--green)" }}>
+                              {app.fit_score}
+                            </strong>{" "}
+                            / 100
+                          </p>
+                        )}
                       <p className="muted break" style={{ fontSize: 11 }}>
                         {app.job_url}
                       </p>
@@ -590,31 +645,37 @@ export default function Home() {
                             Mission {approval.mission_id.slice(0, 8)}…
                           </strong>
                         </div>
-                        <span
-                          className={`tag status-${approval.status}`}
-                        >
+                        <span className={`tag status-${approval.status}`}>
                           {approval.status}
                         </span>
                       </div>
-                      <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
-                        Created{" "}
-                        {new Date(approval.created_at).toLocaleString()}
+                      <p
+                        className="muted"
+                        style={{ fontSize: 12, marginTop: 12 }}
+                      >
+                        Created {new Date(approval.created_at).toLocaleString()}
                       </p>
                       <details style={{ marginTop: 14 }}>
                         <summary>Proposed payload</summary>
-                        <pre>{JSON.stringify(approval.proposed_payload, null, 2)}</pre>
+                        <pre>
+                          {JSON.stringify(approval.proposed_payload, null, 2)}
+                        </pre>
                       </details>
                       {approval.status === "pending" && (
                         <div className="approval-actions">
                           <button
                             className="primary"
-                            onClick={() => resolveApproval(approval.id, "approve")}
+                            onClick={() =>
+                              resolveApproval(approval.id, "approve")
+                            }
                           >
                             Approve
                           </button>
                           <button
                             className="secondary"
-                            onClick={() => resolveApproval(approval.id, "reject")}
+                            onClick={() =>
+                              resolveApproval(approval.id, "reject")
+                            }
                           >
                             Reject
                           </button>

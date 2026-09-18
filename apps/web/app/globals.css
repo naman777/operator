@@ -813,11 +813,30 @@ summary {
   border-color: var(--green);
   color: var(--green);
 }
-.pipeline-stage-saved { background: #f0f3f5; color: #64717e; }
-.pipeline-stage-applied { background: #eaf3ff; color: #2957a8; border-color: #c6d8f5; }
-.pipeline-stage-interview { background: #fff8e1; color: #7a5c00; border-color: #ffe082; }
-.pipeline-stage-offer { background: var(--light); color: var(--green); border-color: #c7dfd2; }
-.pipeline-stage-rejected { background: #fff0ed; color: #9b4133; border-color: #f1b8aa; }
+.pipeline-stage-saved {
+  background: #f0f3f5;
+  color: #64717e;
+}
+.pipeline-stage-applied {
+  background: #eaf3ff;
+  color: #2957a8;
+  border-color: #c6d8f5;
+}
+.pipeline-stage-interview {
+  background: #fff8e1;
+  color: #7a5c00;
+  border-color: #ffe082;
+}
+.pipeline-stage-offer {
+  background: var(--light);
+  color: var(--green);
+  border-color: #c7dfd2;
+}
+.pipeline-stage-rejected {
+  background: #fff0ed;
+  color: #9b4133;
+  border-color: #f1b8aa;
+}
 
 /* ---- Approval inbox ---- */
 .approval-list {
@@ -829,12 +848,31 @@ summary {
   gap: 10px;
   margin-top: 18px;
 }
-.status-approved { background: var(--light); color: var(--green); }
-.status-rejected { background: #fff0ed; color: #9b4133; }
-.status-pending { background: #fff8e1; color: #7a5c00; border-color: #ffe082; }
-.status-queued { background: #f0f3f5; color: #64717e; }
-.status-planning, .status-extracting, .status-matching, .status-verifying, .status-generating {
-  background: #eaf3ff; color: #2957a8; border-color: #c6d8f5;
+.status-approved {
+  background: var(--light);
+  color: var(--green);
+}
+.status-rejected {
+  background: #fff0ed;
+  color: #9b4133;
+}
+.status-pending {
+  background: #fff8e1;
+  color: #7a5c00;
+  border-color: #ffe082;
+}
+.status-queued {
+  background: #f0f3f5;
+  color: #64717e;
+}
+.status-planning,
+.status-extracting,
+.status-matching,
+.status-verifying,
+.status-generating {
+  background: #eaf3ff;
+  color: #2957a8;
+  border-color: #c6d8f5;
 }
 
 /* ---- Nav badge (pending approvals count) ---- */
@@ -863,7 +901,166 @@ summary {
   animation: pulse 1.4s ease-in-out infinite;
 }
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.75); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
 }
 
+/* --------------------------------- Artifact viewer -- */
+.artifacts-panel {
+  margin-top: 20px;
+}
+.artifact-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0;
+}
+.artifact-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  margin-bottom: -1px;
+}
+.artifact-tab:hover {
+  color: var(--ink);
+}
+.artifact-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+.artifact-body {
+  margin-top: 16px;
+}
+.artifact-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.copy-btn {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.copy-btn:hover {
+  color: var(--ink);
+  border-color: var(--green);
+}
+.artifact-text {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink);
+  max-height: 360px;
+  overflow-y: auto;
+}
+.suggestions-list {
+  padding-left: 20px;
+  list-style: decimal;
+}
+.suggestions-list li {
+  margin: 10px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* --------------------------------- Eligibility grid -- */
+.eligibility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 14px 0 20px;
+}
+.eligibility-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12px;
+}
+.eligibility-card strong {
+  display: block;
+  font-size: 11px;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+.eligibility-card p {
+  color: var(--muted);
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.eligibility-card small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.eligibility-icon {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.eligibility-pass .eligibility-icon {
+  color: var(--green, #22c55e);
+}
+.eligibility-fail .eligibility-icon {
+  color: var(--red, #ef4444);
+}
+.eligibility-unknown .eligibility-icon {
+  color: var(--muted);
+}
+.eligibility-pass {
+  border-color: rgba(34, 197, 94, 0.25);
+}
+.eligibility-fail {
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.artifact-citations {
+  margin-top: 24px;
+}
+.artifact-citations blockquote {
+  margin: 16px 0;
+  padding-left: 14px;
+  border-left: 2px solid #c7dfd2;
+  font-size: 12px;
+  line-height: 1.8;
+}

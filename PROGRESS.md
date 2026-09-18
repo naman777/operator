@@ -142,3 +142,9 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Added a unique artifact version index, repaired SQLite migration 004, and preserved completion results across acknowledgement replay.
 - Pipeline upserts use real stored company/title fields, workspace-scoped opportunities, and a workspace lock for concurrent missions.
 - Validation: 34 Python tests passed, one live Temporal test pending; includes four artifact integration tests and repeatable migrations.
+
+### Checkpoint: live inspector and cited artifact viewer
+- Finished and preserved the live SSE inspector with start/cancel/retry controls and failure simulation.
+- Artifact and eligibility views now use generated API types; drafts show actual counts, review status, stored evidence citations, and required/candidate values.
+- Added loading/error handling for artifact requests and clipboard feedback, plus stable selection by artifact ID.
+- Validation: four frontend stream tests, TypeScript checks, and Next.js production build passed. Visual click-through remains unverified because no browser automation surface is available.

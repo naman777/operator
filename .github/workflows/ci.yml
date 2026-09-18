@@ -25,5 +25,6 @@ jobs:
       - run: pnpm contracts
       - run: git diff --exit-code -- packages/contracts
       - run: pnpm format:check
+      - run: pnpm test:web
       - run: pnpm typecheck
       - run: pnpm build
