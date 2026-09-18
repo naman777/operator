@@ -1,6 +1,14 @@
 """Deterministic fixture matching. This is not semantic/model-based analysis."""
 
-from operator_api.schemas import CandidateProfile, JobPosting, MissionResult, RequirementMatch
+from operator_api.schemas import (
+    CandidateProfile,
+    EligibilityCheck,
+    JobPosting,
+    MissionResult,
+    RequirementMatch,
+)
+
+from .eligibility import evaluate
 
 
 def match(job: JobPosting, profile: CandidateProfile):
@@ -24,16 +32,13 @@ def match(job: JobPosting, profile: CandidateProfile):
                 else "No supporting candidate evidence was found by the fixture matcher.",
             )
         )
-    # A matching location is not sufficient to establish work authorization or all eligibility constraints.
-    eligibility = "unknown"
-    if job.location and job.location.casefold() not in {
-        location.casefold() for location in profile.locations
-    }:
-        eligibility = "ineligible"
+    eligibility, eligibility_checks = evaluate(job, profile)
+
     return {
         "matches": [m.model_dump(mode="json") for m in matches],
         "score": round(100 * numerator / denominator, 2) if denominator else 0,
         "eligibility": eligibility,
+        "eligibility_checks": eligibility_checks,
         "profile": profile.model_dump(mode="json"),
     }
 
@@ -59,7 +64,10 @@ def verify(job: JobPosting, matched: dict):
             }:
                 raise ValueError("Evidence does not support the match")
     expected = match(job, profile)
-    if any(matched[key] != expected[key] for key in ("score", "eligibility", "matches")):
+    if any(
+        matched.get(key) != expected.get(key)
+        for key in ("score", "eligibility", "matches", "eligibility_checks")
+    ):
         raise ValueError("Stored match does not reproduce the fixture rubric")
     return {"verified": True, "requirements_checked": len(matches), "source_ids": sorted(sources)}
 
@@ -68,6 +76,9 @@ def result(mission_id, matched, verified):
     return MissionResult(
         mission_id=mission_id,
         eligibility=matched["eligibility"],
+        eligibility_checks=[
+            EligibilityCheck.model_validate(c) for c in matched.get("eligibility_checks", [])
+        ],
         score=matched["score"],
         matches=matched["matches"],
         source_ids=verified["source_ids"],

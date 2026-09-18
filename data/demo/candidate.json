@@ -13,6 +13,9 @@
     "React",
     "SQL"
   ],
+  "work_authorization": ["India", "US-OPT"],
+  "experience_years": 0.5,
+  "employment_type_preference": ["intern", "full-time"],
   "synthetic": true,
   "evidence": [
     {

@@ -128,3 +128,9 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Candidate availability and unknown experience are represented explicitly.
 - Artifact content now has typed citations, a generation-method label, and a required review flag.
 - Regenerated JSON Schemas, OpenAPI, and TypeScript declarations. Combined backend validation currently passes 34 tests (live Temporal test remains opt-in).
+
+### Checkpoint: deterministic eligibility
+- Completed graduation, experience, exact location/authorization, and internship-window checks using supplied constraints only.
+- Missing requirements stay unknown; remote preference no longer passes every on-site location. No graduation cutoff is inferred from a job title.
+- Verification now checks eligibility explanations against reproduced results.
+- Preserved the expanded synthetic profile. Validation: 12 analysis/eligibility tests passed.
