@@ -1,0 +1,112 @@
+{
+  "$defs": {
+    "RequirementMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "requirement_id": {
+          "title": "Requirement Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "partial",
+            "missing"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "requirement_id",
+        "status",
+        "evidence_ids",
+        "explanation"
+      ],
+      "title": "RequirementMatch",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mission_id": {
+      "title": "Mission Id",
+      "type": "string"
+    },
+    "eligibility": {
+      "enum": [
+        "eligible",
+        "ineligible",
+        "unknown"
+      ],
+      "title": "Eligibility",
+      "type": "string"
+    },
+    "score": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Score",
+      "type": "number"
+    },
+    "rubric_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Rubric Version",
+      "type": "string"
+    },
+    "matches": {
+      "items": {
+        "$ref": "#/$defs/RequirementMatch"
+      },
+      "title": "Matches",
+      "type": "array"
+    },
+    "source_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Ids",
+      "type": "array"
+    },
+    "artifact_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Artifact Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "mission_id",
+    "eligibility",
+    "score",
+    "matches",
+    "source_ids",
+    "artifact_ids"
+  ],
+  "title": "MissionResult",
+  "type": "object"
+}

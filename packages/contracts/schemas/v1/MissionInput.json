@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "job_url": {
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "title": "Job Url",
+      "type": "string"
+    },
+    "goal": {
+      "default": "Assess fit and prepare an evidence-backed application pack",
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Goal",
+      "type": "string"
+    },
+    "budget_usd": {
+      "default": 1.0,
+      "exclusiveMinimum": 0,
+      "maximum": 10,
+      "title": "Budget Usd",
+      "type": "number"
+    }
+  },
+  "required": [
+    "job_url"
+  ],
+  "title": "MissionInput",
+  "type": "object"
+}
