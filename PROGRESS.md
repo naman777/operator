@@ -188,3 +188,5 @@ Documentation updated with current startup commands, accurate limitations, and t
 - Pending: PDF/DOCX ingestion, automatic structured education/history parsing, embeddings, real extraction, model matching, durable approval waits, and deployment. Plain-text ingestion appends to demo evidence; it does not silently replace the synthetic candidate.
 
 - Profile checkpoint validation: 38 Python tests passed including isolated live Temporal; frontend typecheck and production build passed.
+
+- Profile UI checkpoint: editable name, graduation, location, authorization and experience; plain-text ingestion; evidence provenance viewer. TypeScript and production build passed.

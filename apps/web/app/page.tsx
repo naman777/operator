@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { RunInspector } from "./run-inspector";
+import { ProfileEditor } from "./profile-editor";
 import { request } from "../lib/api";
 import type { components } from "@operator/contracts";
 type Mission = components["schemas"]["MissionView"];
@@ -485,45 +486,7 @@ export default function Home() {
               </div>
             </>
           ) : screen === "Candidate Profile" ? (
-            <section className="panel">
-              <span className="tag">SYNTHETIC PROFILE</span>
-              <h2>{profile?.name}</h2>
-              <p className="muted">
-                Class of {profile?.graduation_year} ·{" "}
-                {profile?.locations.join(" / ")}
-              </p>
-              {(profile as any).experience_years !== undefined && (
-                <p className="muted">
-                  Experience: {(profile as any).experience_years} years ·
-                  Authorization:{" "}
-                  {(
-                    ((profile as any).work_authorization as string[]) ?? []
-                  ).join(", ") || "Not specified"}
-                </p>
-              )}
-              {(((profile as any).employment_type_preference as string[]) ?? [])
-                .length > 0 && (
-                <div className="samples" style={{ marginBottom: 14 }}>
-                  {(
-                    (profile as any).employment_type_preference as string[]
-                  ).map((pref: string) => (
-                    <span className="tag" key={pref}>
-                      {pref}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <h3>Candidate evidence</h3>
-              {profile?.evidence.map((e) => (
-                <div className="evidence" key={e.id}>
-                  <strong>{e.source_location}</strong>
-                  <p>{e.text}</p>
-                  <small>
-                    {e.document_id} · {e.id}
-                  </small>
-                </div>
-              ))}
-            </section>
+            <ProfileEditor token={token} />
           ) : screen === "Application Pipeline" ? (
             <>
               <div className="stats">
