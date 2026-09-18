@@ -168,6 +168,24 @@ class DispatchCommand(Base):
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class StoredProfile(Base):
+    __tablename__ = "profiles"
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), primary_key=True)
+    content: Mapped[dict] = mapped_column(JSON)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ProfileDocument(Base):
+    __tablename__ = "profile_documents"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    checksum: Mapped[str] = mapped_column(String)
+    name: Mapped[str] = mapped_column(String)
+    text: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (UniqueConstraint("workspace_id", "checksum"),)
+
+
 def database(url=None):
     url = url or os.getenv("DATABASE_URL", "sqlite:///./operator.db")
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})

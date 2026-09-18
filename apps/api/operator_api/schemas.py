@@ -255,3 +255,24 @@ class ArtifactView(Contract):
     content: ArtifactContent
     status: Literal["draft", "final"]
     created_at: datetime
+
+
+class ProfileUpdate(Contract):
+    expected_version: int = Field(ge=0)
+    profile: CandidateProfile
+
+
+class ProfileState(Contract):
+    version: int
+    profile: CandidateProfile
+
+
+class DocumentInput(Contract):
+    name: str = Field(min_length=1, max_length=200)
+    text: str = Field(min_length=10, max_length=100000)
+
+
+class DocumentReceipt(Contract):
+    document_id: str
+    evidence_count: int
+    profile_version: int

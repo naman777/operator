@@ -1,8 +1,9 @@
 import time
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
-from operator_api import runtime
-from operator_api.schemas import JobPosting
+from operator_api import runtime, profiles
+from operator_api.schemas import JobPosting, CandidateProfile
+from operator_api.db import Mission
 from .analysis import match, result, verify
 
 
@@ -24,7 +25,11 @@ class Activities:
         inputs = request.get("inputs", {})
         try:
             if name == "planning":
+                with self.sessions() as db:
+                    mission = db.get(Mission, mission_id)
+                    profile = profiles.load(db, mission.workspace_id, runtime.sample_profile)
                 payload = {
+                    "candidate_profile": profile.model_dump(mode="json"),
                     "steps": list(runtime.STEP_NAMES),
                     "execution_mode": "synthetic-fixture",
                     "job_url": state["job_url"],
@@ -33,7 +38,10 @@ class Activities:
             elif name == "extracting":
                 payload = runtime.sample_job(state["job_url"]).model_dump(mode="json")
             elif name == "matching":
-                payload = match(JobPosting.model_validate(inputs["extracting"]), runtime.sample_profile())
+                payload = match(
+                    JobPosting.model_validate(inputs["extracting"]),
+                    CandidateProfile.model_validate(inputs["planning"]["candidate_profile"]),
+                )
             elif name == "verifying":
                 payload = verify(JobPosting.model_validate(inputs["extracting"]), inputs["matching"])
             elif name == "generating":

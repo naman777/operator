@@ -26,10 +26,16 @@ from .db import (
     Mission,
     StageHistory,
     Workspace,
+    StoredProfile,
     database,
     utcnow,
 )
 from .schemas import (
+    DocumentInput,
+    DocumentReceipt,
+    ProfileUpdate,
+    ProfileState,
+    Evidence,
     ApprovalResolution,
     ApprovalView,
     ApplicationView,
@@ -46,7 +52,7 @@ from .schemas import (
     WorkspaceView,
 )
 
-from . import runtime, streaming
+from . import runtime, streaming, profiles
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -151,8 +157,54 @@ def create_app(database_url=None):
         return ws
 
     @app.get("/v1/profile", response_model=CandidateProfile)
-    def profile(ws: WS):
-        return CandidateProfile.model_validate_json((DATA / "candidate.json").read_text())
+    def profile(ws: WS, db: DB):
+        return profiles.load(db, ws.id, runtime.sample_profile)
+
+    @app.get("/v1/profile/state", response_model=ProfileState)
+    def profile_state(ws: WS, db: DB):
+        stored = db.get(StoredProfile, ws.id)
+        return {
+            "profile": profiles.load(db, ws.id, runtime.sample_profile),
+            "version": stored.version if stored else 0,
+        }
+
+    @app.patch("/v1/profile", response_model=ProfileState)
+    def correct_profile(body: ProfileUpdate, ws: WS, db: DB):
+        profiles.lock(db, ws.id)
+        stored = db.get(StoredProfile, ws.id, populate_existing=True)
+        version = stored.version if stored else 0
+        if body.expected_version != version:
+            raise HTTPException(409, "Profile changed. Reload before saving.")
+        current = profiles.load(db, ws.id, runtime.sample_profile)
+        # Profile corrections cannot rewrite or fabricate source excerpts.
+        if body.profile.evidence != current.evidence or body.profile.id != current.id:
+            raise HTTPException(
+                422, "Evidence and profile identity are read-only; ingest source documents instead."
+            )
+        if stored is None:
+            stored = StoredProfile(
+                workspace_id=ws.id, version=1, content=body.profile.model_dump(mode="json")
+            )
+            db.add(stored)
+        else:
+            stored.content = body.profile.model_dump(mode="json")
+            stored.version += 1
+        db.commit()
+        return {"profile": body.profile, "version": stored.version}
+
+    @app.post("/v1/profile/documents", response_model=DocumentReceipt, status_code=201)
+    def ingest_document(body: DocumentInput, ws: WS, db: DB):
+        try:
+            receipt = profiles.ingest(db, ws.id, body, runtime.sample_profile)
+            db.commit()
+            return receipt
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/v1/evidence", response_model=list[Evidence])
+    def evidence(ws: WS, db: DB):
+        return profiles.load(db, ws.id, runtime.sample_profile).evidence
 
     @app.get("/v1/demo/jobs", response_model=list[JobPosting])
     def jobs(ws: WS):

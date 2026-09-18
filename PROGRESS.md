@@ -179,3 +179,12 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 | `a39a99a` | Worker infrastructure and safe migration adoption |
 
 Documentation updated with current startup commands, accurate limitations, and the next tasks. Changes are committed locally only; nothing was pushed or deployed.
+
+## Phase 4 continuation: profile ingestion
+- Completed workspace-persistent profile corrections with optimistic version checks and immutable source evidence.
+- Added bounded plain-text document ingestion, checksum deduplication, line/character provenance, exact skill detection, and evidence listing.
+- Workflow planning snapshots the workspace profile; retries reuse the same candidate context.
+- Added migration 005, generated contracts, and profile correction/ingestion UI.
+- Pending: PDF/DOCX ingestion, automatic structured education/history parsing, embeddings, real extraction, model matching, durable approval waits, and deployment. Plain-text ingestion appends to demo evidence; it does not silently replace the synthetic candidate.
+
+- Profile checkpoint validation: 38 Python tests passed including isolated live Temporal; frontend typecheck and production build passed.
