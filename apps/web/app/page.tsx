@@ -1,33 +1,40 @@
 "use client";
 import { useEffect, useState } from "react";
+import { RunInspector } from "./run-inspector";
+import { request } from "../lib/api";
 import type { components } from "@operator/contracts";
 type Mission = components["schemas"]["MissionView"];
 type Job = components["schemas"]["JobPosting"];
 type Profile = components["schemas"]["CandidateProfile"];
-type Event = components["schemas"]["EventView"];
+type Application = components["schemas"]["ApplicationView"];
+type Approval = components["schemas"]["ApprovalView"];
 type Screen =
   | "Mission Control"
   | "Opportunities"
   | "Candidate Profile"
+  | "Application Pipeline"
   | "Approval Inbox"
   | "Evaluation Lab";
 const screens: Screen[] = [
   "Mission Control",
   "Opportunities",
   "Candidate Profile",
+  "Application Pipeline",
   "Approval Inbox",
   "Evaluation Lab",
 ];
-const steps = [
-  "Plan mission",
-  "Extract job",
-  "Research company",
-  "Match evidence",
-  "Verify claims",
-  "Approval",
-  "Generate pack",
-  "Update pipeline",
-];
+const screenIcons = ["▦", "◇", "◎", "▤", "▣", "⌁"];
+
+const STAGE_ORDER = ["saved", "applied", "interview", "offer", "rejected"];
+const STAGE_LABELS: Record<string, string> = {
+  saved: "Saved",
+  applied: "Applied",
+  interview: "Interview",
+  offer: "Offer",
+  rejected: "Rejected",
+};
+
+const STATUS_RUNNING = new Set(["queued", "planning", "extracting", "matching", "verifying", "generating"]);
 
 export default function Home() {
   const [token, setToken] = useState("");
@@ -35,8 +42,9 @@ export default function Home() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
   const [selected, setSelected] = useState<Mission | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
   const [url, setUrl] = useState("");
   const [goal, setGoal] = useState(
     "Assess fit and prepare an evidence-backed application pack",
@@ -72,14 +80,18 @@ export default function Home() {
     return response.json();
   }
   async function load(session: string) {
-    const [m, j, p] = await Promise.all([
+    const [m, j, p, apps, apv] = await Promise.all([
       api<Mission[]>("/v1/missions", session),
       api<Job[]>("/v1/demo/jobs", session),
       api<Profile>("/v1/profile", session),
+      api<Application[]>("/v1/applications", session),
+      api<Approval[]>("/v1/approvals", session),
     ]);
     setMissions(m);
     setJobs(j);
     setProfile(p);
+    setApplications(apps);
+    setApprovals(apv);
   }
   useEffect(() => {
     const saved = localStorage.getItem("operator-session");
@@ -92,6 +104,29 @@ export default function Home() {
     // Initial session restoration only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!token || selected) return;
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      Promise.all([
+        request<Mission[]>("/v1/missions", token, { signal: controller.signal }),
+        request<Application[]>("/v1/applications", token, { signal: controller.signal }),
+        request<Approval[]>("/v1/approvals", token, { signal: controller.signal }),
+      ])
+        .then(([m, apps, apv]) => {
+          if (!controller.signal.aborted) {
+            setMissions(m);
+            setApplications(apps);
+            setApprovals(apv);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [token, selected]);
   async function enter() {
     setBusy(true);
     setError("");
@@ -113,12 +148,6 @@ export default function Home() {
   async function inspect(mission: Mission) {
     setError("");
     setSelected(mission);
-    setEvents([]);
-    try {
-      setEvents(await api<Event[]>(`/v1/missions/${mission.id}/events`, token));
-    } catch (e) {
-      setError((e as Error).message);
-    }
   }
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -126,7 +155,6 @@ export default function Home() {
     setError("");
     try {
       const payload = JSON.stringify({ job_url: url, goal, budget_usd: 1 });
-      // Keep the key across ambiguous network failures, but never reuse it for a changed payload.
       const pending = JSON.parse(
         sessionStorage.getItem("operator-pending-mission") || "null",
       ) as { payload: string; key: string } | null;
@@ -150,6 +178,31 @@ export default function Home() {
       setBusy(false);
     }
   }
+  async function moveStage(appId: string, stage: string) {
+    try {
+      await api<Application>(`/v1/applications/${appId}`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ stage }),
+      });
+      const updated = await api<Application[]>("/v1/applications", token);
+      setApplications(updated);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  async function resolveApproval(approvalId: string, action: "approve" | "reject") {
+    try {
+      await api<Approval>(`/v1/approvals/${approvalId}/${action}`, token, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const updated = await api<Approval[]>("/v1/approvals", token);
+      setApprovals(updated);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  const pendingApprovals = approvals.filter((a) => a.status === "pending").length;
   return (
     <div className="app">
       <aside>
@@ -176,13 +229,16 @@ export default function Home() {
                 setSelected(null);
               }}
             >
-              <span className="nav-icon">{["▦", "◇", "◎", "▣", "⌁"][i]}</span>
+              <span className="nav-icon">{screenIcons[i]}</span>
               {s}
+              {s === "Approval Inbox" && pendingApprovals > 0 && (
+                <span className="nav-badge">{pendingApprovals}</span>
+              )}
             </button>
           ))}
         </nav>
         <div className="aside-bottom">
-          <span className="dot" /> Foundation build
+          <span className="dot" /> Workflow preview
           <small>v0.1 · Local development</small>
         </div>
       </aside>
@@ -202,11 +258,15 @@ export default function Home() {
               <p className="muted">
                 {selected
                   ? "Every recorded event, in one place."
-                  : "Turn a promising role into a clear, informed next step."}
+                  : screen === "Application Pipeline"
+                    ? "Track every role from saved to offer."
+                    : screen === "Approval Inbox"
+                      ? "Review and approve pending agent actions."
+                      : "Turn a promising role into a clear, informed next step."}
               </p>
             </div>
             <span className="pill">
-              <span className="dot" /> Draft mode
+              <span className="dot" /> Sample execution
             </span>
           </div>
           {error && (
@@ -233,62 +293,15 @@ export default function Home() {
               </button>
             </div>
           ) : selected ? (
-            <>
-              <button className="back" onClick={() => setSelected(null)}>
-                ← Back to missions
-              </button>
-              <div className="panel">
-                <div className="panel-title">
-                  <h2>{selected.goal}</h2>
-                  <span className="tag">{selected.status}</span>
-                </div>
-                <p className="muted break">{selected.job_url}</p>
-                <div className="notice">
-                  Draft saved successfully. Temporal execution is not connected
-                  in this build; no research or model calls have run.
-                </div>
-                <div className="workflow">
-                  {steps.map((s, i) => (
-                    <div className="step" key={s}>
-                      <span>{String(i + 1).padStart(2, "0")}</span>
-                      <strong>{s}</strong>
-                      <small>Not started</small>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="two-col">
-                <section className="panel">
-                  <h2>Recorded events</h2>
-                  {events.map((event) => (
-                    <div className="event" key={event.id}>
-                      <span className="dot" />
-                      <div>
-                        <strong>{event.type}</strong>
-                        <small>
-                          Sequence {event.sequence} ·{" "}
-                          {new Date(event.created_at).toLocaleString()}
-                        </small>
-                        <pre>{JSON.stringify(event.payload, null, 2)}</pre>
-                      </div>
-                    </div>
-                  ))}
-                </section>
-                <section className="panel">
-                  <h2>Run details</h2>
-                  <dl>
-                    <dt>Mission ID</dt>
-                    <dd>{selected.id}</dd>
-                    <dt>Maximum budget</dt>
-                    <dd>${selected.budget_usd.toFixed(2)}</dd>
-                    <dt>Model usage</dt>
-                    <dd>No calls recorded</dd>
-                    <dt>Evidence & artifacts</dt>
-                    <dd>Available after execution is implemented</dd>
-                  </dl>
-                </section>
-              </div>
-            </>
+            <RunInspector
+              key={selected.id}
+              mission={selected}
+              token={token}
+              onBack={() => {
+                setSelected(null);
+                load(token).catch((e) => setError(e.message));
+              }}
+            />
           ) : screen === "Mission Control" ? (
             <>
               <div className="stats">
@@ -304,8 +317,8 @@ export default function Home() {
                 </div>
                 <div>
                   <small>EXECUTION STATUS</small>
-                  <strong className="stat-text">Coming next</strong>
-                  <span>Temporal worker integration</span>
+                  <strong className="stat-text">Temporal</strong>
+                  <span>Durable sample workflow</span>
                 </div>
               </div>
               <div className="two-col">
@@ -389,12 +402,18 @@ export default function Home() {
                       key={m.id}
                       onClick={() => inspect(m)}
                     >
-                      <span className="mission-icon">◇</span>
+                      <span className="mission-icon">
+                        {STATUS_RUNNING.has(m.status) ? (
+                          <span className="pulse-dot" />
+                        ) : (
+                          "◇"
+                        )}
+                      </span>
                       <span>
                         <strong>{m.goal}</strong>
                         <small>{m.job_url}</small>
                       </span>
-                      <span className="tag">{m.status}</span>
+                      <span className={`tag status-${m.status}`}>{m.status}</span>
                       <span>◇</span>
                     </button>
                   ))
@@ -464,18 +483,155 @@ export default function Home() {
                 </div>
               ))}
             </section>
+          ) : screen === "Application Pipeline" ? (
+            <>
+              <div className="stats">
+                <div>
+                  <small>TOTAL APPLICATIONS</small>
+                  <strong>{applications.length.toString().padStart(2, "0")}</strong>
+                  <span>Across all stages</span>
+                </div>
+                <div>
+                  <small>ACTIVE STAGE</small>
+                  <strong className="stat-text">
+                    {applications.filter((a) => a.stage === "applied" || a.stage === "interview").length > 0
+                      ? "In Progress"
+                      : "Saved"}
+                  </strong>
+                  <span>Most advanced stage</span>
+                </div>
+                <div>
+                  <small>OFFERS</small>
+                  <strong>{applications.filter((a) => a.stage === "offer").length.toString().padStart(2, "0")}</strong>
+                  <span>Received</span>
+                </div>
+              </div>
+              {applications.length === 0 ? (
+                <div className="panel empty">
+                  <span>▤</span>
+                  <h3>No applications yet</h3>
+                  <p>
+                    Complete a mission to automatically add an application to
+                    the pipeline. Start and run a mission from Mission Control
+                    to see it appear here.
+                  </p>
+                  <button
+                    className="primary"
+                    onClick={() => setScreen("Mission Control")}
+                  >
+                    Go to Mission Control →
+                  </button>
+                </div>
+              ) : (
+                <div className="pipeline-grid">
+                  {applications.map((app) => (
+                    <section className="panel pipeline-card" key={app.id}>
+                      <div className="panel-title">
+                        <div>
+                          <span className="avatar">{(app.company ?? "?")[0]}</span>
+                        </div>
+                        <span className={`tag pipeline-stage-${app.stage}`}>
+                          {STAGE_LABELS[app.stage] ?? app.stage}
+                        </span>
+                      </div>
+                      <p className="eyebrow" style={{ marginTop: 14 }}>
+                        {app.company ?? "Unknown company"}
+                      </p>
+                      <h2 style={{ fontSize: 15 }}>{app.title ?? "Unknown role"}</h2>
+                      {app.fit_score !== null && app.fit_score !== undefined && (
+                        <p className="muted" style={{ fontSize: 12 }}>
+                          Fit score:{" "}
+                          <strong style={{ color: "var(--green)" }}>
+                            {app.fit_score}
+                          </strong>{" "}
+                          / 100
+                        </p>
+                      )}
+                      <p className="muted break" style={{ fontSize: 11 }}>
+                        {app.job_url}
+                      </p>
+                      <div className="stage-controls">
+                        {STAGE_ORDER.filter((s) => s !== app.stage).map((s) => (
+                          <button
+                            key={s}
+                            className="stage-btn"
+                            onClick={() => moveStage(app.id, s)}
+                          >
+                            → {STAGE_LABELS[s]}
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : screen === "Approval Inbox" ? (
+            <>
+              {approvals.length === 0 ? (
+                <section className="panel empty">
+                  <span>▣</span>
+                  <h2>No pending approvals</h2>
+                  <p>
+                    Approval gates will be triggered by agent actions that
+                    require human confirmation before proceeding. Run a mission
+                    with an approval step to see requests here.
+                  </p>
+                  <span className="tag">WORKSPACE SCOPED</span>
+                </section>
+              ) : (
+                <div className="approval-list">
+                  {approvals.map((approval) => (
+                    <section className="panel" key={approval.id}>
+                      <div className="panel-title">
+                        <div>
+                          <span className="tag">{approval.action_type}</span>{" "}
+                          <strong style={{ fontSize: 13, marginLeft: 10 }}>
+                            Mission {approval.mission_id.slice(0, 8)}…
+                          </strong>
+                        </div>
+                        <span
+                          className={`tag status-${approval.status}`}
+                        >
+                          {approval.status}
+                        </span>
+                      </div>
+                      <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+                        Created{" "}
+                        {new Date(approval.created_at).toLocaleString()}
+                      </p>
+                      <details style={{ marginTop: 14 }}>
+                        <summary>Proposed payload</summary>
+                        <pre>{JSON.stringify(approval.proposed_payload, null, 2)}</pre>
+                      </details>
+                      {approval.status === "pending" && (
+                        <div className="approval-actions">
+                          <button
+                            className="primary"
+                            onClick={() => resolveApproval(approval.id, "approve")}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="secondary"
+                            onClick={() => resolveApproval(approval.id, "reject")}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </section>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <section className="panel empty">
-              <span>{screen === "Approval Inbox" ? "▣" : "⌁"}</span>
-              <h2>
-                {screen === "Approval Inbox"
-                  ? "No actions awaiting approval"
-                  : "Evaluation results will live here"}
-              </h2>
+              <span>⌁</span>
+              <h2>Evaluation results will live here</h2>
               <p>
-                {screen === "Approval Inbox"
-                  ? "Approval gates will be connected with the execution worker. This build cannot take external actions."
-                  : "No evaluations have run yet. Quality, cost, and latency metrics will be shown only after measurement."}
+                No evaluations have run yet. Quality, cost, and latency metrics
+                will be shown only after measurement.
               </p>
               <span className="tag">PLANNED MILESTONE</span>
             </section>

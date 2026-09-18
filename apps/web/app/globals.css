@@ -689,3 +689,181 @@ dd {
     text-align: right;
   }
 }
+
+.run-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 20px 0;
+}
+.run-controls label {
+  margin: 0;
+  min-width: 220px;
+}
+.run-controls select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+}
+.secondary {
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+}
+.step-completed {
+  background: var(--light);
+  border-style: solid;
+  border-color: #c7dfd2;
+}
+.step-running {
+  border: 2px solid var(--green);
+}
+.step-failed {
+  background: #fff0ed;
+  border-color: #e7a998;
+}
+.step-cancelled {
+  opacity: 0.65;
+}
+.status-completed {
+  background: var(--light);
+  color: var(--green);
+}
+.status-failed {
+  background: #fff0ed;
+  color: #9b4133;
+}
+.report,
+.run-details {
+  margin-top: 24px;
+}
+.score {
+  font-size: 36px;
+  color: var(--green);
+  text-align: right;
+}
+.score small {
+  font-size: 10px;
+}
+.step-output {
+  padding: 17px 0;
+  border-top: 1px solid var(--line);
+}
+summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+}
+.step-output summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.step-output pre {
+  max-height: 360px;
+  overflow: auto;
+}
+.event-detail {
+  display: block;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.report blockquote {
+  font-size: 13px;
+  line-height: 1.8;
+  border-left: 2px solid #c7dfd2;
+  padding-left: 15px;
+  margin: 15px 0;
+}
+
+/* ---- Application pipeline ---- */
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.pipeline-card {
+  display: flex;
+  flex-direction: column;
+}
+.stage-controls {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.stage-btn {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  padding: 6px 10px;
+}
+.stage-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+.pipeline-stage-saved { background: #f0f3f5; color: #64717e; }
+.pipeline-stage-applied { background: #eaf3ff; color: #2957a8; border-color: #c6d8f5; }
+.pipeline-stage-interview { background: #fff8e1; color: #7a5c00; border-color: #ffe082; }
+.pipeline-stage-offer { background: var(--light); color: var(--green); border-color: #c7dfd2; }
+.pipeline-stage-rejected { background: #fff0ed; color: #9b4133; border-color: #f1b8aa; }
+
+/* ---- Approval inbox ---- */
+.approval-list {
+  display: grid;
+  gap: 18px;
+}
+.approval-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.status-approved { background: var(--light); color: var(--green); }
+.status-rejected { background: #fff0ed; color: #9b4133; }
+.status-pending { background: #fff8e1; color: #7a5c00; border-color: #ffe082; }
+.status-queued { background: #f0f3f5; color: #64717e; }
+.status-planning, .status-extracting, .status-matching, .status-verifying, .status-generating {
+  background: #eaf3ff; color: #2957a8; border-color: #c6d8f5;
+}
+
+/* ---- Nav badge (pending approvals count) ---- */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--green);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+/* ---- Pulse dot for running missions ---- */
+.pulse-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+
