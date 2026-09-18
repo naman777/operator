@@ -9,3 +9,6 @@ __pycache__/
 .env
 .env.local
 *.tsbuildinfo
+
+.local/
+*.egg-info/

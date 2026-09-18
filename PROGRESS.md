@@ -108,3 +108,11 @@ The documentation checkpoint records setup instructions, architecture, safety bo
 - Cancellation rejects late writes; retries retain completed outputs; duplicate starts share one outbox entry.
 - Added migration 002 and regenerated frontend contracts.
 - Validation: 11 integration tests passed; Ruff passed. Temporal delivery is the next module and is not running yet.
+
+### Checkpoint: Temporal fixture workflow
+- Completed: official Temporal workflow/worker, bounded retries, five fixture activities, deterministic evidence matching, provenance verification, saved reports, and outbox delivery with stable workflow IDs.
+- Added a Docker-free local Temporal server launcher with persistent history in ignored .local/temporal.
+- Validation: 15 tests passed including a real Temporal server. Verified worker stop/restart during retry backoff, automatic transient recovery, exhausted retries, manual retry with checkpoint reuse, duplicate delivery after completion, and cancellation before dispatch.
+- Test workers use unique task queues so they cannot consume development missions.
+- Matching is deterministic against synthetic evidence; it is not LLM analysis. Reports do not create artifacts or pipeline entries and perform no external actions.
+- Next module: replayable SSE and live run inspector.

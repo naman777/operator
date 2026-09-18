@@ -16,8 +16,11 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pip install '.[dev]'
-      - run: python -m ruff check apps/api scripts tests infra/migrations
+      - run: python -m ruff check apps/api services scripts tests infra/migrations
       - run: python -m pytest -q
+      - run: python -m pytest tests/workflow/test_temporal.py -q
+        env:
+          OPERATOR_RUN_TEMPORAL_TESTS: "1"
       - run: pnpm install --frozen-lockfile
       - run: pnpm contracts
       - run: git diff --exit-code -- packages/contracts
