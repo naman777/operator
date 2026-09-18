@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "id": "job-3",
+  "title": "Machine Learning Intern",
+  "company": "Orbit",
+  "url": "https://example.com/jobs/3",
+  "location": "London",
+  "synthetic": true,
+  "requirements": [
+    {
+      "schema_version": "1.0",
+      "id": "req-3-1",
+      "text": "Python",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-3"
+    },
+    {
+      "schema_version": "1.0",
+      "id": "req-3-2",
+      "text": "PyTorch",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-3"
+    }
+  ],
+  "sources": [
+    {
+      "schema_version": "1.0",
+      "id": "source-3",
+      "url": "https://example.com/jobs/3",
+      "title": "Orbit demo job snapshot",
+      "excerpt": "Orbit is hiring a Machine Learning Intern in London. Required skills: Python, PyTorch.",
+      "synthetic": true
+    }
+  ]
+}

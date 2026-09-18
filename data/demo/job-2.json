@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "id": "job-2",
+  "title": "Frontend Engineering Intern",
+  "company": "Forma",
+  "url": "https://example.com/jobs/2",
+  "location": "Bengaluru",
+  "synthetic": true,
+  "requirements": [
+    {
+      "schema_version": "1.0",
+      "id": "req-2-1",
+      "text": "React",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-2"
+    },
+    {
+      "schema_version": "1.0",
+      "id": "req-2-2",
+      "text": "TypeScript",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-2"
+    }
+  ],
+  "sources": [
+    {
+      "schema_version": "1.0",
+      "id": "source-2",
+      "url": "https://example.com/jobs/2",
+      "title": "Forma demo job snapshot",
+      "excerpt": "Forma is hiring a Frontend Engineering Intern in Bengaluru. Required skills: React, TypeScript.",
+      "synthetic": true
+    }
+  ]
+}

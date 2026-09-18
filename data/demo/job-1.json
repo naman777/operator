@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "id": "job-1",
+  "title": "Software Engineering Intern",
+  "company": "Northstar",
+  "url": "https://example.com/jobs/1",
+  "location": "Remote",
+  "synthetic": true,
+  "requirements": [
+    {
+      "schema_version": "1.0",
+      "id": "req-1-1",
+      "text": "Python",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-1"
+    },
+    {
+      "schema_version": "1.0",
+      "id": "req-1-2",
+      "text": "SQL",
+      "category": "skill",
+      "importance": "required",
+      "source_id": "source-1"
+    }
+  ],
+  "sources": [
+    {
+      "schema_version": "1.0",
+      "id": "source-1",
+      "url": "https://example.com/jobs/1",
+      "title": "Northstar demo job snapshot",
+      "excerpt": "Northstar is hiring a Software Engineering Intern in Remote. Required skills: Python, SQL.",
+      "synthetic": true
+    }
+  ]
+}

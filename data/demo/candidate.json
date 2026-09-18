@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "id": "candidate-demo",
+  "name": "Alex Morgan",
+  "graduation_year": 2027,
+  "locations": [
+    "Remote",
+    "Bengaluru"
+  ],
+  "skills": [
+    "Python",
+    "TypeScript",
+    "React",
+    "SQL"
+  ],
+  "synthetic": true,
+  "evidence": [
+    {
+      "schema_version": "1.0",
+      "id": "ev-1",
+      "document_id": "resume-demo-v1",
+      "source_location": "Projects / Campus Planner",
+      "text": "Built a campus scheduling app using React, TypeScript, and PostgreSQL.",
+      "skills": [
+        "React",
+        "TypeScript",
+        "SQL"
+      ]
+    },
+    {
+      "schema_version": "1.0",
+      "id": "ev-2",
+      "document_id": "resume-demo-v1",
+      "source_location": "Projects / Research Index",
+      "text": "Built a Python service that indexes public research abstracts and exposes a search API.",
+      "skills": [
+        "Python"
+      ]
+    }
+  ]
+}
