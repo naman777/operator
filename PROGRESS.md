@@ -167,3 +167,15 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 - Migration 003 now inspects existing columns instead of swallowing DDL errors; existing local-bootstrap migration adoption is tested.
 - Native API, worker, and production web build restarted on the migrated database; existing local data retained.
 - Compose configuration validates; PostgreSQL container runtime is still unverified.
+
+## Continuation commit map
+| Commit | Checkpoint |
+| --- | --- |
+| `a411c1e` | Explicit eligibility and cited draft contracts |
+| `7365c14` | Deterministic eligibility rules and regression tests |
+| `dca96e9` | Atomic evidence-backed artifacts and pipeline completion |
+| `88af441` | Live inspector, eligibility details, and artifact citations |
+| `6a7f5ab` | Real Temporal and full-stack HTTP artifact verification |
+| `a39a99a` | Worker infrastructure and safe migration adoption |
+
+Documentation updated with current startup commands, accurate limitations, and the next tasks. Changes are committed locally only; nothing was pushed or deployed.

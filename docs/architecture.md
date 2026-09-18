@@ -1,14 +1,35 @@
 # Architecture
 
-The first increment preserves the planned Next.js/FastAPI boundary. Next.js proxies `/api` to FastAPI so the browser uses one origin. The Python service owns the Pydantic contracts, workspace authorization, SQLAlchemy persistence, and transactional creation event.
+Next.js proxies `/api` to FastAPI. Python owns typed contracts, authorization, persistence, and workflow state. PostgreSQL is the intended deployment store; SQLite supports local development and integration tests.
 
-PostgreSQL is the deployment database. SQLite is a dependency-light local/test option only. A versioned migration runner uses a PostgreSQL advisory lock; the first migration creates the initial six business tables. The initial migration contains a frozen schema snapshot so later model changes cannot alter its meaning.
+## Durable execution
 
-Guest tokens are random bearer credentials; only SHA-256 hashes are stored. Each session gets its own workspace. Browser localStorage retains the session for reloads. This local prototype has no session expiry or rate limit and must not be exposed publicly.
+```mermaid
+flowchart LR
+  UI[Next.js] --> API[FastAPI]
+  API --> DB[(Product database)]
+  DB --> Outbox[Dispatch commands]
+  Outbox --> Temporal[Temporal]
+  Temporal --> Worker[Bounded fixture activities]
+  Worker --> DB
+  DB --> SSE[Authenticated event replay]
+  SSE --> UI
+```
 
-Mission creation and its first event commit in one transaction. A workspace-scoped unique idempotency key prevents duplicate creation; conflicting payloads produce 409. Mission/event reads enforce ownership and return 404 for foreign IDs.
+Starting a mission atomically persists its queued state and outbox command. The dispatcher uses stable workflow IDs and rejects duplicate starts, including after completion. Each explicit retry has a new run number; completed activity outputs remain reusable checkpoints. Cancellation sets product state first, preventing late activity writes, and queues cancellation to Temporal.
 
-Temporal, Redis, and MinIO are provisioned in Compose for later work but are not called by this API yet. Langfuse is deferred until tracing is integrated, avoiding an unused multi-service deployment. No generated content is currently produced.
+Activity state, output, and ordered events commit together. Event sequence allocation locks the mission. SSE replays stored events using Last-Event-ID; local polling wakes the stream every 500 ms. Redis publication is not wired yet. The frontend deduplicates sequences and reconnects, including after terminal runs so other tabs can discover manual retries.
 
-## Next execution boundary
-API -> persisted mission -> Temporal workflow -> bounded activities -> persisted events -> Redis publication -> SSE. Before dispatch, add an outbox so database commit and workflow start cannot diverge. The worker must own state transitions, sequence allocation, activity idempotency, and budget enforcement.
+## Analysis and artifacts
+
+Fixture matching uses exact skills attached to candidate evidence. Eligibility evaluates supplied bounds, location, authorization alternatives, and dates; missing hard-requirement coverage remains unknown. No cutoff is inferred from a role title and remote preference does not imply on-site eligibility.
+
+Generation reads completed extraction, matching, and verification checkpoints. Four reviewable drafts quote stored evidence and cite job/candidate sources. Completion atomically stores artifact IDs, report, pipeline update, and final events. Artifact versions are uniquely indexed. A workspace lock serializes pipeline upserts for concurrent missions targeting the same workspace and job; other workspaces have distinct opportunities.
+
+Generated drafts are version 1 and are not sent or submitted. Revision editing, diffs, LLM drafting, and durable approval waits remain pending. Approval REST endpoints currently resolve stored rows only.
+
+## Sessions and migrations
+
+Random bearer tokens are hashed at rest. Guest sessions expire after 24 hours; reset rotates the token in the same workspace. It is not a destructive workspace-data reset. Account authentication, rate limiting, and public-deployment hardening remain pending.
+
+Four ordered migrations define foundation tables, dispatch/checkpoint storage, pipeline/approvals, and artifacts. They run transactionally; PostgreSQL uses an advisory lock. Migration 003 inspects existing columns before adding them, avoiding transaction-aborting duplicate-column errors on bootstrapped databases. Migration 004 works with SQLite and PostgreSQL syntax; only SQLite runtime is currently verified.
