@@ -1,5 +1,64 @@
 {
   "$defs": {
+    "EligibilityCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "check": {
+          "title": "Check",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "candidate_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Value"
+        },
+        "required_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Value"
+        }
+      },
+      "required": [
+        "check",
+        "status",
+        "detail"
+      ],
+      "title": "EligibilityCheck",
+      "type": "object"
+    },
     "RequirementMatch": {
       "additionalProperties": false,
       "properties": {
@@ -64,6 +123,13 @@
       ],
       "title": "Eligibility",
       "type": "string"
+    },
+    "eligibility_checks": {
+      "items": {
+        "$ref": "#/$defs/EligibilityCheck"
+      },
+      "title": "Eligibility Checks",
+      "type": "array"
     },
     "score": {
       "maximum": 100,

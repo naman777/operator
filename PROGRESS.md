@@ -116,4 +116,15 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 | `ae60073` | Worker | Temporal fixture workflow, recovery, and provenance checks |
 | `8697749` | API | Transactional dispatch and durable mission checkpoints |
 | `d15df99` | API | Application pipeline, approval inbox, and guest session expiry |
-| `862c81a` | Web | Application pipeline screen, live approval inbox, mission status indicators |
+| `862c81a` | Web | Application pipeline screen, live approval inbox, mission status indicators |
+
+## Current continuation
+- Reviewed the new pipeline/approval commits and uncommitted artifact/eligibility work; preserving and completing that implementation.
+- Baseline: 3 failures (SQLite artifact migration, invalid artifact result contract, and overly optimistic eligibility), 18 passes, 1 opt-in Temporal test skipped.
+- In progress: explicit eligibility constraints; evidence-backed draft artifacts with atomic, idempotent persistence; generated contracts and inspector integration.
+
+### Checkpoint: typed eligibility and artifact contracts
+- Added explicit graduation/experience bounds, authorization alternatives, internship dates, and source-backed coverage metadata to job contracts.
+- Candidate availability and unknown experience are represented explicitly.
+- Artifact content now has typed citations, a generation-method label, and a required review flag.
+- Regenerated JSON Schemas, OpenAPI, and TypeScript declarations. Combined backend validation currently passes 34 tests (live Temporal test remains opt-in).

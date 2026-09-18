@@ -80,6 +80,59 @@
       "title": "Skills",
       "type": "array"
     },
+    "work_authorization": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Work Authorization",
+      "type": "array"
+    },
+    "experience_years": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Experience Years"
+    },
+    "available_from": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Available From"
+    },
+    "available_until": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Available Until"
+    },
+    "employment_type_preference": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Employment Type Preference",
+      "type": "array"
+    },
     "evidence": {
       "items": {
         "$ref": "#/$defs/Evidence"

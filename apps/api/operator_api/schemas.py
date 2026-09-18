@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 
 
 class Contract(BaseModel):
@@ -50,6 +50,32 @@ class Requirement(Contract):
     source_id: str
 
 
+class EligibilityRequirements(Contract):
+    graduation_year_min: int | None = Field(default=None, ge=1900, le=2200)
+    graduation_year_max: int | None = Field(default=None, ge=1900, le=2200)
+    experience_years_min: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    experience_years_max: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    accepted_work_authorizations: list[str] | None = None
+    internship_start: date | None = None
+    internship_end: date | None = None
+    source_ids: list[str] = Field(default_factory=list)
+    # Only set after all hard requirements have been reviewed against the cited source.
+    requirements_complete: bool = False
+
+    @model_validator(mode="after")
+    def valid_ranges(self):
+        for lower, upper in (
+            (self.graduation_year_min, self.graduation_year_max),
+            (self.experience_years_min, self.experience_years_max),
+            (self.internship_start, self.internship_end),
+        ):
+            if lower is not None and upper is not None and lower > upper:
+                raise ValueError("Eligibility lower bound must not exceed upper bound")
+        if self.accepted_work_authorizations == []:
+            raise ValueError("Authorization alternatives must not be empty")
+        return self
+
+
 class JobPosting(Contract):
     id: str
     title: str
@@ -57,6 +83,7 @@ class JobPosting(Contract):
     url: HttpUrl
     location: str | None = None
     requirements: list[Requirement]
+    eligibility_requirements: EligibilityRequirements | None = None
     sources: list[Source]
     synthetic: bool = False
 
@@ -75,6 +102,11 @@ class CandidateProfile(Contract):
     graduation_year: int = Field(ge=1900, le=2200)
     locations: list[str]
     skills: list[str]
+    work_authorization: list[str] = Field(default_factory=list)
+    experience_years: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    available_from: date | None = None
+    available_until: date | None = None
+    employment_type_preference: list[str] = Field(default_factory=list)
     evidence: list[Evidence]
     synthetic: bool = False
 
@@ -86,9 +118,18 @@ class RequirementMatch(Contract):
     explanation: str
 
 
+class EligibilityCheck(Contract):
+    check: str
+    status: Literal["pass", "fail", "unknown"]
+    detail: str
+    candidate_value: str | None = None
+    required_value: str | None = None
+
+
 class MissionResult(Contract):
     mission_id: str
     eligibility: Literal["eligible", "ineligible", "unknown"]
+    eligibility_checks: list[EligibilityCheck] = Field(default_factory=list)
     score: float = Field(ge=0, le=100)
     rubric_version: Literal["1.0"] = "1.0"
     matches: list[RequirementMatch]
@@ -186,3 +227,31 @@ class ApprovalView(Contract):
 class ApprovalResolution(Contract):
     note: str | None = None
 
+
+class ArtifactCitation(Contract):
+    kind: Literal["candidate", "job"]
+    reference_id: str
+    excerpt: str
+    document_id: str | None = None
+    source_location: str | None = None
+    url: HttpUrl | None = None
+    requirement_ids: list[str] = Field(default_factory=list)
+
+
+class ArtifactContent(Contract):
+    generation_method: Literal["evidence-template-v1"] = "evidence-template-v1"
+    needs_review: Literal[True] = True
+    text: str | None = None
+    suggestions: list[str] = Field(default_factory=list)
+    citations: list[ArtifactCitation] = Field(default_factory=list)
+
+
+class ArtifactView(Contract):
+    id: str
+    mission_id: str
+    workspace_id: str
+    type: Literal["cover_letter", "resume_suggestions", "recruiter_message", "interview_brief"]
+    version: int
+    content: ArtifactContent
+    status: Literal["draft", "final"]
+    created_at: datetime

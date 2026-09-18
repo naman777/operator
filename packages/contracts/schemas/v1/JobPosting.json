@@ -1,5 +1,125 @@
 {
   "$defs": {
+    "EligibilityRequirements": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "graduation_year_min": {
+          "anyOf": [
+            {
+              "maximum": 2200,
+              "minimum": 1900,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graduation Year Min"
+        },
+        "graduation_year_max": {
+          "anyOf": [
+            {
+              "maximum": 2200,
+              "minimum": 1900,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Graduation Year Max"
+        },
+        "experience_years_min": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Years Min"
+        },
+        "experience_years_max": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Years Max"
+        },
+        "accepted_work_authorizations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accepted Work Authorizations"
+        },
+        "internship_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Internship Start"
+        },
+        "internship_end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Internship End"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "requirements_complete": {
+          "default": false,
+          "title": "Requirements Complete",
+          "type": "boolean"
+        }
+      },
+      "title": "EligibilityRequirements",
+      "type": "object"
+    },
     "Requirement": {
       "additionalProperties": false,
       "properties": {
@@ -153,6 +273,17 @@
       },
       "title": "Requirements",
       "type": "array"
+    },
+    "eligibility_requirements": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EligibilityRequirements"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "sources": {
       "items": {

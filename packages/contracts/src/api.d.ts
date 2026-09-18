@@ -348,6 +348,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{mission_id}/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mission Artifacts */
+        get: operations["mission_artifacts_v1_missions__mission_id__artifacts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/artifacts/{artifact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Artifact */
+        get: operations["artifact_v1_artifacts__artifact_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -437,6 +471,92 @@ export interface components {
              */
             created_at: string;
         };
+        /** ArtifactCitation */
+        ArtifactCitation: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "candidate" | "job";
+            /** Reference Id */
+            reference_id: string;
+            /** Excerpt */
+            excerpt: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Source Location */
+            source_location?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Requirement Ids */
+            requirement_ids?: string[];
+        };
+        /** ArtifactContent */
+        ArtifactContent: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Generation Method
+             * @default evidence-template-v1
+             * @constant
+             */
+            generation_method: "evidence-template-v1";
+            /**
+             * Needs Review
+             * @default true
+             * @constant
+             */
+            needs_review: true;
+            /** Text */
+            text?: string | null;
+            /** Suggestions */
+            suggestions?: string[];
+            /** Citations */
+            citations?: components["schemas"]["ArtifactCitation"][];
+        };
+        /** ArtifactView */
+        ArtifactView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** Mission Id */
+            mission_id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "cover_letter" | "resume_suggestions" | "recruiter_message" | "interview_brief";
+            /** Version */
+            version: number;
+            content: components["schemas"]["ArtifactContent"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "final";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** CandidateProfile */
         CandidateProfile: {
             /**
@@ -455,6 +575,16 @@ export interface components {
             locations: string[];
             /** Skills */
             skills: string[];
+            /** Work Authorization */
+            work_authorization?: string[];
+            /** Experience Years */
+            experience_years?: number | null;
+            /** Available From */
+            available_from?: string | null;
+            /** Available Until */
+            available_until?: string | null;
+            /** Employment Type Preference */
+            employment_type_preference?: string[];
             /** Evidence */
             evidence: components["schemas"]["Evidence"][];
             /**
@@ -462,6 +592,58 @@ export interface components {
              * @default false
              */
             synthetic: boolean;
+        };
+        /** EligibilityCheck */
+        EligibilityCheck: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Check */
+            check: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "fail" | "unknown";
+            /** Detail */
+            detail: string;
+            /** Candidate Value */
+            candidate_value?: string | null;
+            /** Required Value */
+            required_value?: string | null;
+        };
+        /** EligibilityRequirements */
+        EligibilityRequirements: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Graduation Year Min */
+            graduation_year_min?: number | null;
+            /** Graduation Year Max */
+            graduation_year_max?: number | null;
+            /** Experience Years Min */
+            experience_years_min?: number | null;
+            /** Experience Years Max */
+            experience_years_max?: number | null;
+            /** Accepted Work Authorizations */
+            accepted_work_authorizations?: string[] | null;
+            /** Internship Start */
+            internship_start?: string | null;
+            /** Internship End */
+            internship_end?: string | null;
+            /** Source Ids */
+            source_ids?: string[];
+            /**
+             * Requirements Complete
+             * @default false
+             */
+            requirements_complete: boolean;
         };
         /** EventView */
         EventView: {
@@ -563,6 +745,7 @@ export interface components {
             location?: string | null;
             /** Requirements */
             requirements: components["schemas"]["Requirement"][];
+            eligibility_requirements?: components["schemas"]["EligibilityRequirements"] | null;
             /** Sources */
             sources: components["schemas"]["Source"][];
             /**
@@ -610,6 +793,8 @@ export interface components {
              * @enum {string}
              */
             eligibility: "eligible" | "ineligible" | "unknown";
+            /** Eligibility Checks */
+            eligibility_checks?: components["schemas"]["EligibilityCheck"][];
             /** Score */
             score: number;
             /**
@@ -1506,6 +1691,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mission_artifacts_v1_missions__mission_id__artifacts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    artifact_v1_artifacts__artifact_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactView"];
                 };
             };
             /** @description Validation Error */
