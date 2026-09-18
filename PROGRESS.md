@@ -190,3 +190,12 @@ Documentation updated with current startup commands, accurate limitations, and t
 - Profile checkpoint validation: 38 Python tests passed including isolated live Temporal; frontend typecheck and production build passed.
 
 - Profile UI checkpoint: editable name, graduation, location, authorization and experience; plain-text ingestion; evidence provenance viewer. TypeScript and production build passed.
+
+## Public extraction continuation
+- Implemented static HTTPS JobPosting JSON-LD ingestion with stored raw snapshots, retrieval timestamps, hashes, explicit requirement excerpts, and isolated import APIs.
+- Guarded transport validates all DNS answers, pins the connection to a public IP while preserving TLS hostname verification, revalidates redirects, and limits bytes/redirects/socket duration. DNS resolution uses the OS resolver and is not independently time-bounded yet.
+- Imported jobs run through the same checkpointed workflow. Planning snapshots both the job and workspace profile.
+- Added import UI and updated inspector labels for retrieved sources.
+- Scope: static JSON-LD only, exact evidence matching; no Playwright screenshots, model calls, embeddings, or automatic hard-constraint extraction yet. Requirement importance uses a conservative required default because structured pages often do not encode required/preferred distinction; extracted requirements require review.
+
+- Extraction backend validation: 53 Python tests passed including isolated live Temporal. Transport guards and imported workflow coverage use controlled HTML/HTTP fixtures; live public-site compatibility remains unverified. Ruff passed.

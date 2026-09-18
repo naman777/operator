@@ -183,7 +183,7 @@ class StepView(Contract):
 
 class RunView(Contract):
     mission: MissionView
-    execution_mode: Literal["synthetic-fixture"] = "synthetic-fixture"
+    execution_mode: Literal["synthetic-fixture", "public-snapshot"] = "synthetic-fixture"
     run_number: int
     steps: list[StepView]
     result: MissionResult | None = None
@@ -276,3 +276,12 @@ class DocumentReceipt(Contract):
     document_id: str
     evidence_count: int
     profile_version: int
+
+
+class OpportunityImport(Contract):
+    url: HttpUrl
+
+
+class ImportReceipt(Contract):
+    import_id: str
+    posting: JobPosting

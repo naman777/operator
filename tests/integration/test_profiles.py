@@ -77,7 +77,8 @@ def test_workflow_profile_snapshot_is_stable_after_corrections(tmp_path):
             "/v1/profile", headers=headers, json={"expected_version": 1, "profile": state["profile"]}
         )
         extraction = ActivityEnvironment().run(
-            activities.execute_step, {"mission_id": mid, "run_number": 1, "step": "extracting"}
+            activities.execute_step,
+            {"mission_id": mid, "run_number": 1, "step": "extracting", "inputs": {"planning": planning}},
         )
         matched = ActivityEnvironment().run(
             activities.execute_step,

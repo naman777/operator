@@ -186,6 +186,17 @@ class ProfileDocument(Base):
     __table_args__ = (UniqueConstraint("workspace_id", "checksum"),)
 
 
+class ImportedJob(Base):
+    __tablename__ = "imported_jobs"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    original_url: Mapped[str] = mapped_column(String)
+    content_hash: Mapped[str] = mapped_column(String)
+    posting: Mapped[dict] = mapped_column(JSON)
+    snapshot: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 def database(url=None):
     url = url or os.getenv("DATABASE_URL", "sqlite:///./operator.db")
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})

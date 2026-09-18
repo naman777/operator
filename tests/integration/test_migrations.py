@@ -30,9 +30,10 @@ def test_migrations_are_repeatable(tmp_path):
         "artifacts",
         "profiles",
         "profile_documents",
+        "imported_jobs",
     }
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 5
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 6
     engine.dispose()
 
 
@@ -50,5 +51,5 @@ def test_migrations_adopt_existing_local_bootstrap(tmp_path):
         capture_output=True,
     )
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 5
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 6
     engine.dispose()

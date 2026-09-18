@@ -28,15 +28,17 @@ class Activities:
                 with self.sessions() as db:
                     mission = db.get(Mission, mission_id)
                     profile = profiles.load(db, mission.workspace_id, runtime.sample_profile)
+                    job = runtime.load_job(db, mission)
                 payload = {
                     "candidate_profile": profile.model_dump(mode="json"),
+                    "job_posting": job.model_dump(mode="json"),
                     "steps": list(runtime.STEP_NAMES),
                     "execution_mode": "synthetic-fixture",
                     "job_url": state["job_url"],
                     "model_calls": 0,
                 }
             elif name == "extracting":
-                payload = runtime.sample_job(state["job_url"]).model_dump(mode="json")
+                payload = inputs["planning"]["job_posting"]
             elif name == "matching":
                 payload = match(
                     JobPosting.model_validate(inputs["extracting"]),

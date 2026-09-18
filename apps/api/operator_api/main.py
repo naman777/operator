@@ -1,3 +1,4 @@
+import http.client
 import hashlib
 import logging
 import os
@@ -27,10 +28,13 @@ from .db import (
     StageHistory,
     Workspace,
     StoredProfile,
+    ImportedJob,
     database,
     utcnow,
 )
 from .schemas import (
+    OpportunityImport,
+    ImportReceipt,
     DocumentInput,
     DocumentReceipt,
     ProfileUpdate,
@@ -52,7 +56,7 @@ from .schemas import (
     WorkspaceView,
 )
 
-from . import runtime, streaming, profiles
+from . import runtime, streaming, profiles, extraction
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -443,6 +447,36 @@ def create_app(database_url=None):
         if not found:
             raise HTTPException(404, "Artifact not found")
         return found
+
+    @app.post("/v1/opportunities/import", response_model=ImportReceipt, status_code=201)
+    def import_job(body: OpportunityImport, db: DB, ws: WS):
+        try:
+            final_url, html = extraction.fetch(str(body.url))
+            posting = extraction.parse(final_url, html)
+        except (ValueError, OSError, http.client.HTTPException) as exc:
+            raise HTTPException(422, "Could not import a supported public HTTPS JobPosting page.") from exc
+        row = ImportedJob(
+            id=str(uuid4()),
+            workspace_id=ws.id,
+            original_url=str(body.url),
+            content_hash=hashlib.sha256(html.encode()).hexdigest(),
+            posting=posting.model_dump(mode="json"),
+            snapshot=html,
+        )
+        db.add(row)
+        db.commit()
+        return {"import_id": row.id, "posting": posting}
+
+    @app.get("/v1/opportunities/imports", response_model=list[ImportReceipt])
+    def imports(db: DB, ws: WS):
+        return [
+            {"import_id": row.id, "posting": row.posting}
+            for row in db.scalars(
+                select(ImportedJob)
+                .where(ImportedJob.workspace_id == ws.id)
+                .order_by(ImportedJob.created_at.desc())
+            )
+        ]
 
     return app
 

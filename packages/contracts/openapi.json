@@ -1462,6 +1462,112 @@
           }
         }
       }
+    },
+    "/v1/opportunities/import": {
+      "post": {
+        "summary": "Import Job",
+        "operationId": "import_job_v1_opportunities_import_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpportunityImport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/opportunities/imports": {
+      "get": {
+        "summary": "Imports",
+        "operationId": "imports_v1_opportunities_imports_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ImportReceipt"
+                  },
+                  "title": "Response Imports V1 Opportunities Imports Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2365,6 +2471,30 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "ImportReceipt": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "import_id": {
+            "type": "string",
+            "title": "Import Id"
+          },
+          "posting": {
+            "$ref": "#/components/schemas/JobPosting"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "import_id",
+          "posting"
+        ],
+        "title": "ImportReceipt"
+      },
       "JobPosting": {
         "properties": {
           "schema_version": {
@@ -2632,6 +2762,29 @@
         ],
         "title": "MissionView"
       },
+      "OpportunityImport": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "OpportunityImport"
+      },
       "ProfileState": {
         "properties": {
           "schema_version": {
@@ -2788,7 +2941,10 @@
           },
           "execution_mode": {
             "type": "string",
-            "const": "synthetic-fixture",
+            "enum": [
+              "synthetic-fixture",
+              "public-snapshot"
+            ],
             "title": "Execution Mode",
             "default": "synthetic-fixture"
           },

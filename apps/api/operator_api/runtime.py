@@ -17,6 +17,7 @@ from .db import (
     StageHistory,
     StepOutput,
     Workspace,
+    ImportedJob,
     utcnow,
 )
 from .schemas import CandidateProfile, JobPosting
@@ -39,6 +40,17 @@ def sample_job(url):
     raise StateConflict("Execution currently supports only the three synthetic sample job URLs.")
 
 
+def load_job(db, mission):
+    imported = db.scalar(
+        select(ImportedJob)
+        .where(ImportedJob.workspace_id == mission.workspace_id, ImportedJob.original_url == mission.job_url)
+        .order_by(ImportedJob.created_at.desc())
+    )
+    if imported:
+        return JobPosting.model_validate(imported.posting)
+    return sample_job(mission.job_url)
+
+
 def sample_profile():
     return CandidateProfile.model_validate_json((DATA / "candidate.json").read_text(encoding="utf-8"))
 
@@ -52,6 +64,14 @@ def lock_mission(db, mission_id):
 
 
 def record_event(db, mission, kind, payload):
+    if "execution_mode" in payload:
+        planning = db.scalar(
+            select(MissionStep).where(MissionStep.mission_id == mission.id, MissionStep.name == "planning")
+        )
+        saved = db.get(StepOutput, planning.id) if planning else None
+        posting = saved.output.get("job_posting", {}) if saved and saved.output else {}
+        if posting and not posting.get("synthetic", True):
+            payload = {**payload, "execution_mode": "public-snapshot"}
     sequence = (db.scalar(select(func.max(Event.sequence)).where(Event.mission_id == mission.id)) or 0) + 1
     event = Event(
         id=str(uuid4()),
@@ -85,7 +105,7 @@ def start_mission(db, mission_id, retry=False):
     expected = "failed" if retry else "draft"
     if mission.status != expected:
         raise StateConflict(f"Only {expected} missions can be {'retried' if retry else 'started'}.")
-    sample_job(mission.job_url)
+    load_job(db, mission)
     run = db.get(MissionRun, mission_id)
     if run is None:
         run = MissionRun(mission_id=mission_id, run_number=1, failure_remaining=0)
@@ -174,6 +194,12 @@ def run_view(db, mission):
         "run_number": run.run_number if run else 0,
         "steps": views,
         "result": run.result if run else None,
+        "execution_mode": "public-snapshot"
+        if any(
+            view["name"] == "extracting" and view["output"] and not view["output"].get("synthetic", True)
+            for view in views
+        )
+        else "synthetic-fixture",
     }
 
 

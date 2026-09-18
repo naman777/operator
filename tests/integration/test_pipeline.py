@@ -1,4 +1,5 @@
-﻿"""Integration tests for application pipeline and approval inbox endpoints."""
+"""Integration tests for application pipeline and approval inbox endpoints."""
+
 from fastapi.testclient import TestClient
 from operator_api.main import create_app
 
@@ -41,7 +42,9 @@ def test_guest_session_reset_issues_new_token(tmp_path):
         new_token = reset["token"]
         assert new_token != original
         # New token works.
-        assert client.get("/v1/workspace", headers={"Authorization": f"Bearer {new_token}"}).status_code == 200
+        assert (
+            client.get("/v1/workspace", headers={"Authorization": f"Bearer {new_token}"}).status_code == 200
+        )
         # Old token is now invalidated.
         assert client.get("/v1/workspace", headers=orig_headers).status_code == 401
 
@@ -98,16 +101,22 @@ def test_application_stage_patch(tmp_path):
         assert resp.json()["stage"] == "applied"
 
         # Invalid stage should fail.
-        assert client.patch(
-            f"/v1/applications/{app_id}",
-            headers=headers,
-            json={"stage": "hired"},
-        ).status_code == 422
+        assert (
+            client.patch(
+                f"/v1/applications/{app_id}",
+                headers=headers,
+                json={"stage": "hired"},
+            ).status_code
+            == 422
+        )
 
         # Other workspace cannot access.
         other = client.post("/v1/guest-sessions").json()["token"]
-        assert client.patch(
-            f"/v1/applications/{app_id}",
-            headers={"Authorization": f"Bearer {other}"},
-            json={"stage": "interview"},
-        ).status_code == 404
+        assert (
+            client.patch(
+                f"/v1/applications/{app_id}",
+                headers={"Authorization": f"Bearer {other}"},
+                json={"stage": "interview"},
+            ).status_code
+            == 404
+        )
