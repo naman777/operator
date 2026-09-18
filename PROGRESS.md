@@ -116,3 +116,9 @@ The documentation checkpoint records setup instructions, architecture, safety bo
 - Test workers use unique task queues so they cannot consume development missions.
 - Matching is deterministic against synthetic evidence; it is not LLM analysis. Reports do not create artifacts or pipeline entries and perform no external actions.
 - Next module: replayable SSE and live run inspector.
+
+### Checkpoint: replayable event streaming
+- Completed authenticated SSE with committed-event replay, monotonic IDs, Last-Event-ID/after cursors, heartbeats, and terminal-run closure.
+- Streaming reads use short database transactions. Redis fan-out is deferred; the current local implementation polls persisted events every 500 ms.
+- Validation: all 12 API integration tests passed, including stream replay, cursor validation, and cross-workspace denial; Ruff passed.
+- Next: connect the frontend to real step states and stored outputs.

@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -27,7 +28,7 @@ from .schemas import (
     WorkspaceView,
 )
 
-from . import runtime
+from . import runtime, streaming
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -190,13 +191,35 @@ def create_app(database_url=None):
         return get_owned(db, ws, mission_id)
 
     @app.get("/v1/missions/{mission_id}/events", response_model=list[EventView])
-    def events(mission_id: str, db: DB, ws: WS, after: int = 0):
+    def events(mission_id: str, db: DB, ws: WS, after: Annotated[int, Query(ge=0)] = 0):
         get_owned(db, ws, mission_id)
         return db.scalars(
             select(Event)
             .where(Event.mission_id == mission_id, Event.sequence > after)
             .order_by(Event.sequence)
         ).all()
+
+    @app.get(
+        "/v1/missions/{mission_id}/stream",
+        response_class=StreamingResponse,
+        responses={200: {"content": {"text/event-stream": {}}}},
+    )
+    def stream_events(
+        mission_id: str,
+        request: Request,
+        db: DB,
+        ws: WS,
+        after: Annotated[int, Query(ge=0)] = 0,
+        last_event_id: Annotated[int | None, Header(ge=0)] = None,
+    ):
+        get_owned(db, ws, mission_id)
+        # Do not retain a transaction for the lifetime of a streaming connection.
+        db.rollback()
+        return StreamingResponse(
+            streaming.stream(sessions, request, mission_id, max(after, last_event_id or 0)),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+        )
 
     def control(mission_id, db, ws, action):
         get_owned(db, ws, mission_id)
