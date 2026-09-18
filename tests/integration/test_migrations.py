@@ -25,7 +25,10 @@ def test_migrations_are_repeatable(tmp_path):
         "mission_runs",
         "step_outputs",
         "dispatch_commands",
+        "stage_history",
+        "approvals",
     }
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 2
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 3
     engine.dispose()
+

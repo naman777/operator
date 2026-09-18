@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy import func, select, update
-from .db import DispatchCommand, Event, Mission, MissionRun, MissionStep, StepOutput, utcnow
+from .db import Application, DispatchCommand, Event, Mission, MissionRun, MissionStep, Opportunity, StageHistory, StepOutput, utcnow
 from .schemas import CandidateProfile, JobPosting
 
 STEP_NAMES = ("planning", "extracting", "matching", "verifying", "generating")
@@ -226,6 +226,54 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
         if name == "generating":
             run.result = payload
             mission.status = "completed"
+            # Upsert an application in the pipeline.
+            opportunity = db.scalar(
+                select(Opportunity).where(Opportunity.url == mission.job_url)
+            )
+            if opportunity is None:
+                opportunity = Opportunity(
+                    id=str(uuid4()),
+                    workspace_id=mission.workspace_id,
+                    title=payload.get("job_title", "Unknown role"),
+                    company=payload.get("company", "Unknown company"),
+                    url=mission.job_url,
+                )
+                db.add(opportunity)
+                db.flush()
+            existing_app = db.scalar(
+                select(Application).where(
+                    Application.workspace_id == mission.workspace_id,
+                    Application.opportunity_id == opportunity.id,
+                )
+            )
+            if existing_app is None:
+                app = Application(
+                    id=str(uuid4()),
+                    workspace_id=mission.workspace_id,
+                    opportunity_id=opportunity.id,
+                    mission_id=mission.id,
+                    stage="saved",
+                    fit_score=payload.get("score"),
+                    company=opportunity.company,
+                    title=opportunity.title,
+                    job_url=mission.job_url,
+                )
+                db.add(app)
+                db.flush()
+                db.add(
+                    StageHistory(
+                        id=str(uuid4()),
+                        application_id=app.id,
+                        from_stage=None,
+                        to_stage="saved",
+                        note="Created from completed mission",
+                    )
+                )
+            else:
+                if payload.get("score") is not None:
+                    existing_app.fit_score = payload["score"]
+                    existing_app.mission_id = mission.id
+                    existing_app.updated_at = utcnow()
             record_event(
                 db,
                 mission,

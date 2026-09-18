@@ -29,6 +29,7 @@ class Workspace(Base):
     name: Mapped[str] = mapped_column(String)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True)
     token_hash: Mapped[str] = mapped_column(String, unique=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Mission(Base):
@@ -80,8 +81,41 @@ class Application(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"))
     opportunity_id: Mapped[str] = mapped_column(ForeignKey("opportunities.id"))
+    mission_id: Mapped[str | None] = mapped_column(ForeignKey("missions.id"), nullable=True)
     stage: Mapped[str] = mapped_column(String, default="saved")
     fit_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    company: Mapped[str | None] = mapped_column(String, nullable=True)
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    job_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+APPLICATION_STAGES = ("saved", "applied", "interview", "offer", "rejected")
+
+
+class StageHistory(Base):
+    __tablename__ = "stage_history"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    from_stage: Mapped[str | None] = mapped_column(String, nullable=True)
+    to_stage: Mapped[str] = mapped_column(String)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    note: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class Approval(Base):
+    __tablename__ = "approvals"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), index=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    action_type: Mapped[str] = mapped_column(String)  # e.g. "pipeline_update", "send_email"
+    proposed_payload: Mapped[dict] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String, default="pending")  # pending, approved, rejected
+    resolved_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class MissionRun(Base):

@@ -100,6 +100,7 @@ class WorkspaceView(Contract):
     id: str
     name: str
     is_demo: bool
+    expires_at: datetime | None = None
 
 
 class GuestSession(Contract):
@@ -145,3 +146,43 @@ class RunView(Contract):
     run_number: int
     steps: list[StepView]
     result: MissionResult | None = None
+
+
+APPLICATION_STAGES = ("saved", "applied", "interview", "offer", "rejected")
+
+
+class ApplicationView(Contract):
+    id: str
+    workspace_id: str
+    opportunity_id: str
+    mission_id: str | None = None
+    stage: str
+    fit_score: float | None = None
+    company: str | None = None
+    title: str | None = None
+    job_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class StageUpdate(Contract):
+    stage: Literal["saved", "applied", "interview", "offer", "rejected"]
+    note: str | None = None
+
+
+class ApprovalView(Contract):
+    id: str
+    mission_id: str
+    workspace_id: str
+    action_type: str
+    proposed_payload: dict
+    status: Literal["pending", "approved", "rejected"]
+    resolved_by: str | None = None
+    resolved_at: datetime | None = None
+    expires_at: datetime | None = None
+    created_at: datetime
+
+
+class ApprovalResolution(Contract):
+    note: str | None = None
+

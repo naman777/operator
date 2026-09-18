@@ -4,6 +4,7 @@ import os
 import secrets
 import time
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -15,8 +16,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .logging_config import configure_logging
-from .db import Base, Event, Mission, Workspace, database
+from .db import APPLICATION_STAGES, Approval, Application, Base, Event, Mission, StageHistory, Workspace, database, utcnow
 from .schemas import (
+    ApprovalResolution,
+    ApprovalView,
+    ApplicationView,
     FailureSimulation,
     RunView,
     CandidateProfile,
@@ -25,6 +29,7 @@ from .schemas import (
     JobPosting,
     MissionInput,
     MissionView,
+    StageUpdate,
     WorkspaceView,
 )
 
@@ -33,6 +38,7 @@ from . import runtime, streaming
 configure_logging()
 logger = logging.getLogger("operator.api")
 DATA = Path(os.getenv("OPERATOR_DATA_DIR", str(Path(__file__).resolve().parents[3] / "data" / "demo")))
+GUEST_TTL_HOURS = 24
 
 
 def create_app(database_url=None):
@@ -78,6 +84,13 @@ def create_app(database_url=None):
         found = db.scalar(select(Workspace).where(Workspace.token_hash == digest))
         if not found:
             raise HTTPException(401, "Invalid guest session")
+        if found.expires_at:
+            from datetime import timezone as _tz
+            exp = found.expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=_tz.utc)
+            if exp < utcnow():
+                raise HTTPException(401, "Guest session expired. Open a new workspace.")
         return found
 
     WS = Annotated[Workspace, Depends(workspace)]
@@ -102,8 +115,19 @@ def create_app(database_url=None):
             name="Guest workspace",
             is_demo=True,
             token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            expires_at=utcnow() + timedelta(hours=GUEST_TTL_HOURS),
         )
         db.add(ws)
+        db.commit()
+        response.headers["Cache-Control"] = "no-store"
+        return {"token": token, "workspace": ws}
+
+    @app.post("/v1/guest-sessions/reset", response_model=GuestSession, status_code=201)
+    def reset_guest(ws: WS, db: DB, response: Response):
+        """Reset the current guest workspace: clear all missions and re-issue a fresh token."""
+        token = secrets.token_urlsafe(32)
+        ws.token_hash = hashlib.sha256(token.encode()).hexdigest()
+        ws.expires_at = utcnow() + timedelta(hours=GUEST_TTL_HOURS)
         db.commit()
         response.headers["Cache-Control"] = "no-store"
         return {"token": token, "workspace": ws}
@@ -250,6 +274,88 @@ def create_app(database_url=None):
     @app.get("/v1/missions/{mission_id}/run", response_model=RunView)
     def run(mission_id: str, db: DB, ws: WS):
         return runtime.run_view(db, get_owned(db, ws, mission_id))
+
+    # ---------------------------------------------------------------------------
+    # Application pipeline
+    # ---------------------------------------------------------------------------
+
+    @app.get("/v1/applications", response_model=list[ApplicationView])
+    def applications(db: DB, ws: WS):
+        return db.scalars(
+            select(Application)
+            .where(Application.workspace_id == ws.id)
+            .order_by(Application.created_at.desc())
+        ).all()
+
+    @app.patch("/v1/applications/{application_id}", response_model=ApplicationView)
+    def update_stage(application_id: str, body: StageUpdate, db: DB, ws: WS):
+        app = db.scalar(
+            select(Application).where(Application.id == application_id, Application.workspace_id == ws.id)
+        )
+        if not app:
+            raise HTTPException(404, "Application not found")
+        if body.stage not in APPLICATION_STAGES:
+            raise HTTPException(422, f"Invalid stage. Choose from: {', '.join(APPLICATION_STAGES)}")
+        old_stage = app.stage
+        app.stage = body.stage
+        app.updated_at = utcnow()
+        db.add(StageHistory(
+            id=str(uuid4()),
+            application_id=app.id,
+            from_stage=old_stage,
+            to_stage=body.stage,
+            note=body.note,
+        ))
+        db.commit()
+        return app
+
+    # ---------------------------------------------------------------------------
+    # Approval inbox
+    # ---------------------------------------------------------------------------
+
+    @app.get("/v1/approvals", response_model=list[ApprovalView])
+    def approvals(db: DB, ws: WS, status: Annotated[str | None, Query()] = None):
+        stmt = select(Approval).where(Approval.workspace_id == ws.id)
+        if status:
+            stmt = stmt.where(Approval.status == status)
+        return db.scalars(stmt.order_by(Approval.created_at.desc())).all()
+
+    def get_approval(db, ws, approval_id):
+        found = db.scalar(
+            select(Approval).where(Approval.id == approval_id, Approval.workspace_id == ws.id)
+        )
+        if not found:
+            raise HTTPException(404, "Approval not found")
+        return found
+
+    @app.post("/v1/approvals/{approval_id}/approve", response_model=ApprovalView)
+    def approve(approval_id: str, body: ApprovalResolution, db: DB, ws: WS):
+        approval = get_approval(db, ws, approval_id)
+        if approval.status != "pending":
+            raise HTTPException(409, "Approval is no longer pending")
+        if approval.expires_at:
+            from datetime import timezone as _tz
+            exp = approval.expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=_tz.utc)
+            if exp < utcnow():
+                raise HTTPException(409, "Approval has expired")
+        approval.status = "approved"
+        approval.resolved_at = utcnow()
+        approval.resolved_by = "user"
+        db.commit()
+        return approval
+
+    @app.post("/v1/approvals/{approval_id}/reject", response_model=ApprovalView)
+    def reject(approval_id: str, body: ApprovalResolution, db: DB, ws: WS):
+        approval = get_approval(db, ws, approval_id)
+        if approval.status != "pending":
+            raise HTTPException(409, "Approval is no longer pending")
+        approval.status = "rejected"
+        approval.resolved_at = utcnow()
+        approval.resolved_by = "user"
+        db.commit()
+        return approval
 
     return app
 
