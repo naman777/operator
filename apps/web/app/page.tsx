@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { RunInspector } from "./run-inspector";
 import { ProfileEditor } from "./profile-editor";
+import { JobImporter } from "./job-importer";
 import { request } from "../lib/api";
 import type { components } from "@operator/contracts";
 type Mission = components["schemas"]["MissionView"];
@@ -452,9 +453,16 @@ export default function Home() {
             </>
           ) : screen === "Opportunities" ? (
             <>
+              <JobImporter
+                token={token}
+                onSelect={(value) => {
+                  setUrl(value);
+                  setScreen("Mission Control");
+                }}
+              />
               <div className="notice">
-                These are synthetic fixtures, not real vacancies. Application
-                pipeline updates are planned for the workflow milestone.
+                These are synthetic fixtures, not real vacancies. Completed
+                analyses create a saved pipeline entry.
               </div>
               <div className="job-grid">
                 {jobs.map((j) => (

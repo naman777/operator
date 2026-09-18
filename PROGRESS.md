@@ -1,9 +1,9 @@
 # Operator implementation progress
 
-Updated: 2026-09-18
+Updated: 2026-09-19
 
 ## Current milestone
-Durable synthetic workflow, live inspector, explicit eligibility checks, and four cited application drafts are implemented and validated. Next: workspace profile ingestion and guarded real job extraction, followed by structured model matching and durable approvals.
+Durable workflow, profile correction/plain-text evidence ingestion, guarded static public-job imports, eligibility checks, and four cited drafts are implemented. Next: structured resume parsing, embeddings/semantic matching, browser extraction, and durable approvals.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -38,7 +38,7 @@ Durable synthetic workflow, live inspector, explicit eligibility checks, and fou
 - Added 5 integration tests for pipeline and approval endpoints.
 
 ## Validation performed
-- Python tests: **36 passed**, including a real isolated Temporal server, mid-run worker restart, retries, artifact provenance and replay, concurrent pipeline writes, authorization, and migrations.
+- Python tests: **53 passed**, including a real isolated Temporal server, mid-run worker restart, retries, artifact provenance and replay, concurrent pipeline writes, authorization, and migrations.
 - Ruff checks: passed for API, scripts, tests, and migration.
 - Frontend formatting check: passed.
 - TypeScript type checking: passed (enforced by Next.js build).
@@ -47,13 +47,13 @@ Durable synthetic workflow, live inspector, explicit eligibility checks, and fou
 - No model-quality metrics or workflow-completion metrics have been measured.
 
 ## In progress / next work
-Phase 4 is next:
-1. Profile ingestion: parse resume into structured education, skills, experience, dates, and preferences.
+Phase 4 is in progress (plain-text ingestion and static public snapshots completed):
+1. Extend profile ingestion to PDF/DOCX and parse resume into structured education, skills, experience, dates, and preferences.
 2. Chunk and embed evidence with provenance (pgvector).
 3. Feed real, source-backed job constraints and ingested profile data into the implemented deterministic eligibility checks.
 4. Replace exact fixture skill matching with structured semantic matching while preserving the reproducible score and evidence matrix.
 5. Extend the implemented cited template drafts with controlled model drafting and immutable revisions.
-6. Add artifact diff view and citation viewer.
+6. Add artifact revision/diff view; citation viewer is implemented.
 
 Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, and complete local-stack validation.
 
@@ -199,3 +199,7 @@ Documentation updated with current startup commands, accurate limitations, and t
 - Scope: static JSON-LD only, exact evidence matching; no Playwright screenshots, model calls, embeddings, or automatic hard-constraint extraction yet. Requirement importance uses a conservative required default because structured pages often do not encode required/preferred distinction; extracted requirements require review.
 
 - Extraction backend validation: 53 Python tests passed including isolated live Temporal. Transport guards and imported workflow coverage use controlled HTML/HTTP fixtures; live public-site compatibility remains unverified. Ruff passed.
+
+- Backend checkpoint: `d17ecb8`. Profile checkpoints: `6c97e3e` and `e56a977`.
+
+- Public import UI validation: four frontend tests, typecheck, formatting and production build passed. Import selection preserves the successfully retrieved URL even if the input changes afterward. Visual browser testing remains unverified.

@@ -18,11 +18,11 @@ const ARTIFACT_LABELS: Record<string, string> = {
 };
 
 const labels: Record<string, string> = {
-  planning: "Plan sample run",
-  extracting: "Load job fixture",
+  planning: "Plan analysis",
+  extracting: "Load job snapshot",
   matching: "Match evidence",
   verifying: "Verify provenance",
-  generating: "Store sample report",
+  generating: "Store analysis and drafts",
 };
 
 export function RunInspector({
@@ -144,10 +144,11 @@ export function RunInspector({
         </div>
         <p className="muted break">{current.job_url}</p>
         <div className="notice">
-          Synthetic fixture analysis. This run uses saved sample data and
-          deterministic skill matching. It does not browse the web, call a
-          model, or submit applications. Generated application drafts require
-          your review.
+          {run?.execution_mode === "public-snapshot"
+            ? "This analysis uses your saved public job snapshot."
+            : "This analysis uses saved sample job data until its source is loaded."}{" "}
+          Matching uses exact evidence terms. Generated drafts require your
+          review.
         </div>
         <div className="run-controls">
           {current.status === "draft" && (
@@ -172,7 +173,7 @@ export function RunInspector({
                 onClick={() => act("start")}
                 disabled={busy || !run}
               >
-                Start sample run
+                Start analysis
               </button>
             </>
           )}
@@ -226,7 +227,7 @@ export function RunInspector({
       {run?.result && (
         <section className="panel report">
           <div className="panel-title">
-            <h2>Sample fit report</h2>
+            <h2>Fit report</h2>
             <strong className="score">
               {run.result.score}
               <small>out of 100</small>
@@ -300,7 +301,8 @@ export function RunInspector({
               <blockquote key={source.id}>
                 {source.excerpt}
                 <small>
-                  {source.title} / {source.url} / Synthetic source
+                  {source.title} / {source.url} /{" "}
+                  {source.synthetic ? "Synthetic source" : "Retrieved source"}
                 </small>
               </blockquote>
             ))}
@@ -427,7 +429,7 @@ export function RunInspector({
             <dt>Budget cap</dt>
             <dd>${current.budget_usd.toFixed(2)}</dd>
             <dt>Model calls / spend</dt>
-            <dd>0 / $0.00 - fixture activities only</dd>
+            <dd>0 / $0.00 - deterministic activities</dd>
             <dt>Activity latency</dt>
             <dd>
               {run?.steps.reduce(
