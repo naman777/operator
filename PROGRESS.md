@@ -10,6 +10,12 @@ Updated: 2026-09-19
 - Durable completion events record attempted model calls, including calls whose output was rejected in favor of the deterministic fallback.
 - Validation: 91 Python tests passed (one opt-in Temporal test skipped), Ruff passed, four frontend tests passed, and TypeScript checks passed. The installed Agents SDK accepted the configured typed Agent and one-turn Runner interface.
 
+### Checkpoint: source-backed model requirement parsing
+- Added structured model extraction in the worker after guarded retrieval and JSON-LD validation. It can supplement sparse JSON-LD with required/preferred requirements and explicit hard constraints.
+- Every accepted requirement and constraint must reference an exact retrieved-source excerpt. IDs are generated locally; source-absent numbers, dates, authorization values, and invented requirements are discarded.
+- Untrusted page text is isolated as data, model tools remain disabled, and provider/schema failures preserve the original JSON-LD posting. Extraction attempts are included in the mission's durable model-call count.
+- Validation: 93 Python tests passed (one opt-in Temporal test skipped), Ruff passed, four frontend tests passed, TypeScript checks passed, and the installed Agents SDK accepted the job-parser output schema. Live provider validation remains pending because no API key is configured.
+
 ## Current milestone
 Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 

@@ -24,7 +24,10 @@ def prepare(db, mission_id, payload):
     report = MissionResult.model_validate(payload)
     if report.mission_id != mission_id or report.artifact_ids:
         raise ValueError("Invalid generation result identity")
-    job = JobPosting.model_validate(checkpoint(db, mission_id, "extracting"))
+    job_payload = dict(checkpoint(db, mission_id, "extracting"))
+    job_payload.pop("_model_calls", None)
+    job_payload.pop("_model_fallback", None)
+    job = JobPosting.model_validate(job_payload)
     matched = checkpoint(db, mission_id, "matching")
     verified = checkpoint(db, mission_id, "verifying")
     if verified.get("verified") is not True:

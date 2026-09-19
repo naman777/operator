@@ -10,7 +10,14 @@ from operator_api.schemas import JobPosting, CandidateProfile
 from operator_api.db import Approval, Mission, utcnow
 from .analysis import match, result, verify
 from .model_runtime import enabled as model_enabled
-from .model_runtime import enrich_matches, generate_drafts
+from .model_runtime import enrich_job, enrich_matches, generate_drafts
+
+
+def job_from_step(payload):
+    clean = dict(payload)
+    clean.pop("_model_calls", None)
+    clean.pop("_model_fallback", None)
+    return JobPosting.model_validate(clean)
 
 
 class Activities:
@@ -44,18 +51,27 @@ class Activities:
                     "model_calls": 0,
                 }
             elif name == "extracting":
-                payload = inputs["planning"]["job_posting"]
+                with self.sessions() as db:
+                    budget_usd = db.get(Mission, mission_id).budget_usd
+                posting, model_calls, fallback = enrich_job(
+                    JobPosting.model_validate(inputs["planning"]["job_posting"]), budget_usd
+                )
+                payload = posting.model_dump(mode="json")
+                payload.update({"_model_calls": model_calls, "_model_fallback": fallback})
             elif name == "matching":
-                job = JobPosting.model_validate(inputs["extracting"])
+                job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
                 with self.sessions() as db:
                     budget_usd = db.get(Mission, mission_id).budget_usd
                 payload = enrich_matches(job, profile, match(job, profile), budget_usd)
+                payload["model_calls"] = payload.get("model_calls", 0) + inputs["extracting"].get(
+                    "_model_calls", 0
+                )
             elif name == "verifying":
-                payload = verify(JobPosting.model_validate(inputs["extracting"]), inputs["matching"])
+                payload = verify(job_from_step(inputs["extracting"]), inputs["matching"])
             elif name == "generating":
                 payload = result(mission_id, inputs["matching"], inputs["verifying"])
-                job = JobPosting.model_validate(inputs["extracting"])
+                job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
                 with self.sessions() as db:
                     budget_usd = db.get(Mission, mission_id).budget_usd
