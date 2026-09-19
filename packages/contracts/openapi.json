@@ -334,6 +334,79 @@
         }
       }
     },
+    "/v1/profile/documents/upload": {
+      "post": {
+        "summary": "Upload Document",
+        "description": "Upload a PDF or DOCX resume and ingest its extracted text as evidence.",
+        "operationId": "upload_document_v1_profile_documents_upload_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_v1_profile_documents_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/evidence": {
       "get": {
         "summary": "Evidence",
@@ -1461,6 +1534,70 @@
             }
           }
         }
+      },
+      "patch": {
+        "summary": "Revise Artifact",
+        "description": "Submit a revised draft. Creates a new versioned artifact and marks the old one superseded.",
+        "operationId": "revise_artifact_v1_artifacts__artifact_id__patch",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArtifactUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/opportunities/import": {
@@ -1877,7 +2014,10 @@
           },
           "generation_method": {
             "type": "string",
-            "const": "evidence-template-v1",
+            "enum": [
+              "evidence-template-v1",
+              "agents-sdk-v1"
+            ],
             "title": "Generation Method",
             "default": "evidence-template-v1"
           },
@@ -1916,6 +2056,32 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ArtifactContent"
+      },
+      "ArtifactUpdate": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ArtifactContent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "content"
+        ],
+        "title": "ArtifactUpdate",
+        "description": "Body for PATCH /v1/artifacts/{id} \u2014 submit a revised draft."
       },
       "ArtifactView": {
         "properties": {
@@ -1958,9 +2124,21 @@
             "type": "string",
             "enum": [
               "draft",
-              "final"
+              "final",
+              "superseded"
             ],
             "title": "Status"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
           },
           "created_at": {
             "type": "string",
@@ -1981,6 +2159,20 @@
           "created_at"
         ],
         "title": "ArtifactView"
+      },
+      "Body_upload_document_v1_profile_documents_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_document_v1_profile_documents_upload_post"
       },
       "CandidateProfile": {
         "properties": {
@@ -2079,6 +2271,16 @@
             "type": "boolean",
             "title": "Synthetic",
             "default": false
+          },
+          "parse_source": {
+            "type": "string",
+            "enum": [
+              "synthetic",
+              "user-correction",
+              "heuristic-v1"
+            ],
+            "title": "Parse Source",
+            "default": "synthetic"
           }
         },
         "additionalProperties": false,

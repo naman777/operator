@@ -132,3 +132,55 @@ def test_concurrent_missions_share_workspace_application_but_not_artifacts(setup
     with sessions() as db:
         assert len(db.scalars(select(Opportunity)).all()) == 2
         assert len(db.scalars(select(Application)).all()) == 2
+
+
+def test_artifact_revision_creates_new_version_and_supersedes_old(setup):
+    """PATCH /v1/artifacts/{id} should create a new version and mark the original superseded."""
+    client, headers, mid, sessions = setup
+    inputs = prepare(client, headers, mid, sessions)
+    generate(mid, sessions, inputs)
+    artifacts = client.get(f"/v1/missions/{mid}/artifacts", headers=headers).json()
+    original = next(a for a in artifacts if a["type"] == "cover_letter")
+    assert original["version"] == 1
+    assert original["status"] == "draft"
+    assert original["superseded_by"] is None
+
+    new_content = {
+        "generation_method": "evidence-template-v1",
+        "needs_review": True,
+        "text": "Revised cover letter with corrections.",
+        "suggestions": [],
+        "citations": [],
+    }
+    resp = client.patch(
+        f"/v1/artifacts/{original['id']}",
+        headers=headers,
+        json={"expected_version": 1, "content": new_content},
+    )
+    assert resp.status_code == 200
+    v2 = resp.json()
+    assert v2["version"] == 2
+    assert v2["status"] == "draft"
+    assert v2["content"]["text"] == "Revised cover letter with corrections."
+    assert v2["superseded_by"] is None
+
+    v1 = client.get(f"/v1/artifacts/{original['id']}", headers=headers).json()
+    assert v1["status"] == "superseded"
+    assert v1["superseded_by"] == v2["id"]
+
+    conflict = client.patch(
+        f"/v1/artifacts/{v2['id']}",
+        headers=headers,
+        json={"expected_version": 1, "content": new_content},
+    )
+    assert conflict.status_code == 409
+
+    already_superseded = client.patch(
+        f"/v1/artifacts/{original['id']}",
+        headers=headers,
+        json={"expected_version": 1, "content": new_content},
+    )
+    assert already_superseded.status_code == 409
+
+    with sessions() as db:
+        assert len(db.scalars(select(Artifact)).all()) == 5

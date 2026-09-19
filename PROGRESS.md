@@ -213,6 +213,14 @@ Documentation updated with current startup commands, accurate limitations, and t
 
 Native database backed up before migrations 005/006; API, worker and dashboard restarted. Full-stack HTTP smoke passed (guest session, dispatch, retry recovery, SSE, four cited drafts, pipeline and cancellation). Local dashboard: http://127.0.0.1:3000. No changes pushed or deployed.
 
+## Phase 4/5 continuation: sourced constraints, approval waits, and artifact revisions
+- Public JSON-LD imports now copy explicit experience, graduation, work-authorization, and internship-window constraints into the typed eligibility model with source provenance. Application deadlines are kept separate from internship dates and are never treated as eligibility evidence.
+- Resume ingestion deterministically extracts graduation year and dated work-history duration while preserving user corrections and recording whether a value came from synthetic data, a correction, or heuristic parsing.
+- Opportunity workflows now pause durably after verification, create one idempotent approval record, and resume from a Temporal signal. Approval, rejection, and timeout transitions are stored as mission events; rejection and timeout cancel the mission instead of leaving it stuck awaiting approval.
+- Draft artifacts can be edited into immutable revisions. Each save creates the next version, marks the prior version superseded, and retains version history in the run inspector.
+- Added migrations 007/008 for approval workflow routing and artifact revision links; migrations remain repeatable on existing SQLite databases.
+- Validation: 77 Python tests passed plus the isolated real Temporal integration test; Ruff, generated-contract type checking, four frontend tests, Prettier, and the Next.js production build passed.
+
 ## Phase 4 continuation: PDF/DOCX resume upload ingestion
 - Added `pypdf`, `python-docx`, and `python-multipart` as production dependencies.
 - Added `apps/api/operator_api/document_parser.py`: `extract_pdf(bytes)` and `extract_docx(bytes)` work entirely in-memory via `io.BytesIO`; no temp files; both raise `ValueError` with a user-safe message on failure.

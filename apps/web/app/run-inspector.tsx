@@ -43,6 +43,11 @@ export function RunInspector({
   const [artifactError, setArtifactError] = useState("");
   const [artifactLoading, setArtifactLoading] = useState(false);
   const [copyMessage, setCopyMessage] = useState("");
+  // Edit state
+  const [editingArtifactId, setEditingArtifactId] = useState("");
+  const [editDraft, setEditDraft] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const { run, events, connection, streamError } = useMissionRun(
     mission.id,
@@ -93,6 +98,43 @@ export function RunInspector({
       setCopyMessage(
         "Clipboard access failed. Select the draft text to copy it manually.",
       );
+    }
+  }
+  async function submitRevision(artifact: Artifact) {
+    setEditBusy(true);
+    setEditError("");
+    try {
+      const updated = await request<Artifact>(
+        `/v1/artifacts/${artifact.id}`,
+        token,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expected_version: artifact.version,
+            content: { ...artifact.content, text: editDraft },
+          }),
+        },
+      );
+      setArtifacts((prev) =>
+        prev
+          .map((a) =>
+            a.id === artifact.id
+              ? {
+                  ...a,
+                  status: "superseded" as const,
+                  superseded_by: updated.id,
+                }
+              : a,
+          )
+          .concat(updated),
+      );
+      setArtifactTab(updated.id);
+      setEditingArtifactId("");
+    } catch (cause) {
+      setEditError((cause as Error).message);
+    } finally {
+      setEditBusy(false);
     }
   }
   const job = run?.steps.find((step) => step.name === "extracting")?.output as
@@ -328,70 +370,148 @@ export function RunInspector({
             sent.
           </p>
           <div className="artifact-tabs">
-            {artifacts.map((a) => (
-              <button
-                key={a.id}
-                className={`artifact-tab${artifactTab === a.id ? " active" : ""}`}
-                onClick={() => {
-                  setArtifactTab(a.id);
-                  setCopyMessage("");
-                }}
-                aria-pressed={artifactTab === a.id}
-              >
-                {ARTIFACT_LABELS[a.type] ?? a.type}
-              </button>
-            ))}
-          </div>
-          {artifacts.map((a) =>
-            a.id === artifactTab ? (
-              <div key={a.id} className="artifact-body">
-                <div className="artifact-meta">
-                  <span className="tag">
-                    v{a.version} · {a.status}
-                  </span>
-                  <button className="copy-btn" onClick={() => copyArtifact(a)}>
-                    Copy
-                  </button>
-                </div>
-                {a.type === "resume_suggestions" ? (
-                  <ol className="suggestions-list">
-                    {(a.content.suggestions ?? []).map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ol>
-                ) : (
-                  <pre className="artifact-text">{a.content.text ?? ""}</pre>
-                )}
-                <details className="artifact-citations">
-                  <summary>
-                    Source citations ({a.content.citations?.length ?? 0})
-                  </summary>
-                  {(a.content.citations ?? []).map((citation) => (
-                    <blockquote
-                      key={`${citation.kind}-${citation.reference_id}`}
+            {artifacts
+              .filter((a) => a.status !== "superseded")
+              .map((a) => (
+                <button
+                  key={a.id}
+                  className={`artifact-tab${artifactTab === a.id ? " active" : ""}`}
+                  onClick={() => {
+                    setArtifactTab(a.id);
+                    setCopyMessage("");
+                    setEditingArtifactId("");
+                  }}
+                  aria-pressed={artifactTab === a.id}
+                >
+                  {ARTIFACT_LABELS[a.type] ?? a.type}
+                  {a.version > 1 && (
+                    <span
+                      className="tag"
+                      style={{ marginLeft: "0.4rem", fontSize: "0.7rem" }}
                     >
-                      {citation.excerpt}
-                      <small>
-                        {citation.kind} / {citation.reference_id}
-                      </small>
-                      {citation.document_id && (
+                      v{a.version}
+                    </span>
+                  )}
+                </button>
+              ))}
+          </div>
+          {artifacts
+            .filter((a) => a.status !== "superseded")
+            .map((a) =>
+              a.id === artifactTab ? (
+                <div key={a.id} className="artifact-body">
+                  <div className="artifact-meta">
+                    <span className="tag">
+                      v{a.version} · {a.status}
+                    </span>
+                    {editingArtifactId !== a.id && (
+                      <>
+                        <button
+                          className="copy-btn"
+                          onClick={() => copyArtifact(a)}
+                        >
+                          Copy
+                        </button>
+                        {a.type !== "resume_suggestions" && (
+                          <button
+                            className="copy-btn"
+                            id={`edit-artifact-${a.id}`}
+                            onClick={() => {
+                              setEditingArtifactId(a.id);
+                              setEditDraft(a.content.text ?? "");
+                              setEditError("");
+                            }}
+                          >
+                            ✏ Edit
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {editingArtifactId === a.id && (
+                      <>
+                        <button
+                          className="copy-btn"
+                          disabled={editBusy}
+                          onClick={() => submitRevision(a)}
+                        >
+                          {editBusy ? "Saving…" : "Save revision"}
+                        </button>
+                        <button
+                          className="copy-btn"
+                          onClick={() => setEditingArtifactId("")}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {editError && <p className="error">{editError}</p>}
+                  {editingArtifactId === a.id ? (
+                    <textarea
+                      id={`artifact-edit-textarea-${a.id}`}
+                      className="artifact-edit-textarea"
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      rows={20}
+                    />
+                  ) : a.type === "resume_suggestions" ? (
+                    <ol className="suggestions-list">
+                      {(a.content.suggestions ?? []).map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <pre className="artifact-text">{a.content.text ?? ""}</pre>
+                  )}
+                  <details className="artifact-citations">
+                    <summary>
+                      Source citations ({a.content.citations?.length ?? 0})
+                    </summary>
+                    {(a.content.citations ?? []).map((citation) => (
+                      <blockquote
+                        key={`${citation.kind}-${citation.reference_id}`}
+                      >
+                        {citation.excerpt}
                         <small>
-                          {citation.document_id} / {citation.source_location}
+                          {citation.kind} / {citation.reference_id}
                         </small>
-                      )}
-                      {citation.url && (
-                        <small className="break">{citation.url}</small>
-                      )}
-                      <small>
-                        Requirements:{" "}
-                        {citation.requirement_ids?.join(", ") || "Job context"}
-                      </small>
-                    </blockquote>
-                  ))}
-                </details>
-              </div>
-            ) : null,
-          )}
+                        {citation.document_id && (
+                          <small>
+                            {citation.document_id} / {citation.source_location}
+                          </small>
+                        )}
+                        {citation.url && (
+                          <small className="break">{citation.url}</small>
+                        )}
+                        <small>
+                          Requirements:{" "}
+                          {citation.requirement_ids?.join(", ") ||
+                            "Job context"}
+                        </small>
+                      </blockquote>
+                    ))}
+                  </details>
+                  {/* Revision history: superseded versions of this artifact type */}
+                  {artifacts.some(
+                    (s) => s.type === a.type && s.status === "superseded",
+                  ) && (
+                    <details className="artifact-citations">
+                      <summary>Version history</summary>
+                      {artifacts
+                        .filter(
+                          (s) => s.type === a.type && s.status === "superseded",
+                        )
+                        .sort((x, y) => x.version - y.version)
+                        .map((s) => (
+                          <p key={s.id} className="muted">
+                            v{s.version} — superseded · {s.id.slice(0, 8)}
+                          </p>
+                        ))}
+                    </details>
+                  )}
+                </div>
+              ) : null,
+            )}
         </section>
       )}
       <div className="two-col run-details">

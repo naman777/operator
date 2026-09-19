@@ -15,6 +15,7 @@ from temporalio.worker import Worker
 
 from operator_api.db import (
     Artifact,
+    Approval,
     Application,
     DispatchCommand,
     Event,
@@ -72,13 +73,37 @@ async def run_scenarios(tmp_path):
                     temporal,
                     task_queue=task_queue,
                     workflows=[OpportunityMissionWorkflow],
-                    activities=[activities.execute_step, activities.mark_failed],
+                    activities=[
+                        activities.execute_step,
+                        activities.mark_failed,
+                        activities.request_approval,
+                        activities.resolve_approval_wait,
+                    ],
                     activity_executor=executor,
                 )
 
             async def result(mid, number=1):
+                workflow_id = f"opportunity-{mid}-{number}"
+                while True:
+                    with sessions() as db:
+                        approval = db.scalar(
+                            select(Approval).where(
+                                Approval.mission_id == mid,
+                                Approval.status == "pending",
+                            )
+                        )
+                    if approval:
+                        await temporal.get_workflow_handle(workflow_id).signal(
+                            "approval_resolved", True
+                        )
+                        break
+                    handle = temporal.get_workflow_handle(workflow_id)
+                    description = await handle.describe()
+                    if description.status.name != "RUNNING":
+                        break
+                    await asyncio.sleep(0.02)
                 return await asyncio.wait_for(
-                    temporal.get_workflow_handle(f"opportunity-{mid}-{number}").result(), 60
+                    temporal.get_workflow_handle(workflow_id).result(), 60
                 )
 
             # Deliver while no worker is alive: Temporal must retain the work.

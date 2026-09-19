@@ -144,6 +144,16 @@
       "default": false,
       "title": "Synthetic",
       "type": "boolean"
+    },
+    "parse_source": {
+      "default": "synthetic",
+      "enum": [
+        "synthetic",
+        "user-correction",
+        "heuristic-v1"
+      ],
+      "title": "Parse Source",
+      "type": "string"
     }
   },
   "required": [

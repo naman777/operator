@@ -116,6 +116,8 @@ class Approval(Base):
     resolved_by: Mapped[str | None] = mapped_column(String, nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Temporal workflow handle ID; set when the workflow is waiting for the signal.
+    workflow_id: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -132,7 +134,9 @@ class Artifact(Base):
     )  # cover_letter, resume_suggestions, recruiter_message, interview_brief
     version: Mapped[int] = mapped_column(Integer, default=1)
     content: Mapped[dict] = mapped_column(JSON)
-    status: Mapped[str] = mapped_column(String, default="draft")  # draft | final
+    status: Mapped[str] = mapped_column(String, default="draft")  # draft | final | superseded
+    # ID of the artifact that replaced this version; null for the latest revision.
+    superseded_by: Mapped[str | None] = mapped_column(String, ForeignKey("artifacts.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

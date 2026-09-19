@@ -358,10 +358,15 @@ def fail_mission(sessions, mission_id, run_number, name):
         if mission.status in TERMINAL or run.run_number != run_number:
             return
         mission.status = "failed"
+        # awaiting_approval is not a persisted MissionStep; skip step-level update.
         step = db.scalar(
             select(MissionStep).where(MissionStep.mission_id == mission_id, MissionStep.name == name)
         )
-        step.status = "failed"
-        output = db.get(StepOutput, step.id)
-        output.error = output.error or "Activity exhausted its retry limit. Retry from this checkpoint."
-        record_event(db, mission, "mission.failed", {"step": name, "error": output.error})
+        error_msg = "Activity exhausted its retry limit. Retry from this checkpoint."
+        if step is not None:
+            step.status = "failed"
+            output = db.get(StepOutput, step.id)
+            if output:
+                output.error = output.error or error_msg
+                error_msg = output.error
+        record_event(db, mission, "mission.failed", {"step": name, "error": error_msg})

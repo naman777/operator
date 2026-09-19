@@ -127,6 +127,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/profile/documents/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Document
+         * @description Upload a PDF or DOCX resume and ingest its extracted text as evidence.
+         */
+        post: operations["upload_document_v1_profile_documents_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/evidence": {
         parameters: {
             query?: never;
@@ -431,7 +451,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Revise Artifact
+         * @description Submit a revised draft. Creates a new versioned artifact and marks the old one superseded.
+         */
+        patch: operations["revise_artifact_v1_artifacts__artifact_id__patch"];
         trace?: never;
     };
     "/v1/opportunities/import": {
@@ -594,9 +618,9 @@ export interface components {
             /**
              * Generation Method
              * @default evidence-template-v1
-             * @constant
+             * @enum {string}
              */
-            generation_method: "evidence-template-v1";
+            generation_method: "evidence-template-v1" | "agents-sdk-v1";
             /**
              * Needs Review
              * @default true
@@ -609,6 +633,21 @@ export interface components {
             suggestions?: string[];
             /** Citations */
             citations?: components["schemas"]["ArtifactCitation"][];
+        };
+        /**
+         * ArtifactUpdate
+         * @description Body for PATCH /v1/artifacts/{id} — submit a revised draft.
+         */
+        ArtifactUpdate: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Expected Version */
+            expected_version: number;
+            content: components["schemas"]["ArtifactContent"];
         };
         /** ArtifactView */
         ArtifactView: {
@@ -636,12 +675,22 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "draft" | "final";
+            status: "draft" | "final" | "superseded";
+            /** Superseded By */
+            superseded_by?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+        };
+        /** Body_upload_document_v1_profile_documents_upload_post */
+        Body_upload_document_v1_profile_documents_upload_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
         };
         /** CandidateProfile */
         CandidateProfile: {
@@ -678,6 +727,12 @@ export interface components {
              * @default false
              */
             synthetic: boolean;
+            /**
+             * Parse Source
+             * @default synthetic
+             * @enum {string}
+             */
+            parse_source: "synthetic" | "user-correction" | "heuristic-v1";
         };
         /** DocumentInput */
         DocumentInput: {
@@ -1423,6 +1478,43 @@ export interface operations {
             };
         };
     };
+    upload_document_v1_profile_documents_upload_post: {
+        parameters: {
+            query?: {
+                name?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_document_v1_profile_documents_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     evidence_v1_evidence_get: {
         parameters: {
             query?: never;
@@ -2045,6 +2137,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArtifactView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revise_artifact_v1_artifacts__artifact_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArtifactUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

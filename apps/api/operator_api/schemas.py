@@ -109,6 +109,8 @@ class CandidateProfile(Contract):
     employment_type_preference: list[str] = Field(default_factory=list)
     evidence: list[Evidence]
     synthetic: bool = False
+    # Records where structured fields (graduation_year, experience_years) were last set from.
+    parse_source: Literal["synthetic", "user-correction", "heuristic-v1"] = "synthetic"
 
 
 class RequirementMatch(Contract):
@@ -239,7 +241,7 @@ class ArtifactCitation(Contract):
 
 
 class ArtifactContent(Contract):
-    generation_method: Literal["evidence-template-v1"] = "evidence-template-v1"
+    generation_method: Literal["evidence-template-v1", "agents-sdk-v1"] = "evidence-template-v1"
     needs_review: Literal[True] = True
     text: str | None = None
     suggestions: list[str] = Field(default_factory=list)
@@ -253,8 +255,16 @@ class ArtifactView(Contract):
     type: Literal["cover_letter", "resume_suggestions", "recruiter_message", "interview_brief"]
     version: int
     content: ArtifactContent
-    status: Literal["draft", "final"]
+    status: Literal["draft", "final", "superseded"]
+    superseded_by: str | None = None
     created_at: datetime
+
+
+class ArtifactUpdate(Contract):
+    """Body for PATCH /v1/artifacts/{id} — submit a revised draft."""
+
+    expected_version: int = Field(ge=1)
+    content: ArtifactContent
 
 
 class ProfileUpdate(Contract):

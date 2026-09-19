@@ -1,4 +1,9 @@
-"""Plain-text ingestion preserves excerpts; it never infers accomplishments or education."""
+"""Plain-text ingestion with heuristic structured parsing.
+
+Ingestion preserves source excerpts and never infers accomplishments.
+Structured fields (graduation year, experience years) are extracted only
+by deterministic regex patterns; uncertain values are left as None.
+"""
 
 import hashlib
 import re
@@ -20,6 +25,107 @@ SKILLS = (
     "Redis",
     "Temporal",
 )
+
+# ── Heuristic patterns for structured resume fields ──────────────────────────
+
+# Education section headers
+_EDUCATION_HEADER = re.compile(
+    r"^(education|academic\s+background|qualifications?)\s*:?\s*$",
+    re.I | re.M,
+)
+
+# Graduation year: "Class of 2025", "Expected 2025", "Graduated 2024", "May 2024", four-digit year in degree line
+_GRAD_YEAR = re.compile(
+    r"\b(?:class\s+of|expected|graduating|graduated(?:\s+in)?|expected\s+graduation|grad\.?)\s*:?\s*(20\d{2}|19[89]\d)\b"
+    r"|(20\d{2}|19[89]\d)\s*(?:\(expected\)|\(anticipated\))?",
+    re.I,
+)
+
+# Experience section headers
+_EXPERIENCE_HEADER = re.compile(
+    r"^(work\s+experience|professional\s+experience|employment(\s+history)?|experience)\s*:?\s*$",
+    re.I | re.M,
+)
+
+# Employment date range: "Jan 2020 – Mar 2023", "2019 - 2022", "06/2021 - Present", "2020 – present"
+_DATE_RANGE = re.compile(
+    r"(?:"
+    r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    r"jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    r"\.?\s+)?"
+    r"(20\d{2}|19[89]\d)"
+    r"\s*(?:–|-|to)\s*"
+    r"(?:(20\d{2}|19[89]\d)|(?:present|current|now))",
+    re.I,
+)
+
+
+def _parse_grad_year(text: str) -> int | None:
+    """Return the most recently mentioned graduation year, or None."""
+    candidates = []
+    for m in _GRAD_YEAR.finditer(text):
+        year_str = m.group(1) or m.group(2)
+        if year_str:
+            candidates.append(int(year_str))
+    if not candidates:
+        return None
+    # Prefer years in an education section if detectable
+    edu_match = _EDUCATION_HEADER.search(text)
+    if edu_match:
+        edu_text = text[edu_match.start():]
+        exp_match = _EXPERIENCE_HEADER.search(edu_text)
+        edu_section = edu_text[: exp_match.start()] if exp_match else edu_text[:3000]
+        section_candidates = []
+        for m in _GRAD_YEAR.finditer(edu_section):
+            year_str = m.group(1) or m.group(2)
+            if year_str:
+                section_candidates.append(int(year_str))
+        if section_candidates:
+            return max(section_candidates)
+    return max(candidates)
+
+
+def _parse_experience_years(text: str) -> float | None:
+    """Return total years of experience inferred from date ranges, or None."""
+    from datetime import date as _date
+
+    today = _date.today()
+    total_months = 0
+    found_any = False
+
+    # Restrict to experience section if present
+    exp_match = _EXPERIENCE_HEADER.search(text)
+    region = text[exp_match.start():] if exp_match else text
+
+    for m in _DATE_RANGE.finditer(region):
+        found_any = True
+        start_year = int(m.group(1))
+        end_group = m.group(2)
+        end_year = int(end_group) if end_group else today.year
+        # Treat each role as starting January of start_year, ending December of end_year
+        months = max(0, (end_year - start_year) * 12)
+        total_months += months
+
+    if not found_any or total_months == 0:
+        return None
+    # Round to one decimal place; cap at 40 to guard against malformed text
+    return min(40.0, round(total_months / 12, 1))
+
+
+def _parse_structure(text: str) -> dict:
+    """Return a dict of inferred structured fields from plain resume text.
+
+    Only fields that can be extracted with reasonable confidence are included.
+    Returns an empty dict when nothing is found.
+    """
+    result = {}
+    grad_year = _parse_grad_year(text)
+    if grad_year and 1980 <= grad_year <= 2030:
+        result["graduation_year"] = grad_year
+    exp = _parse_experience_years(text)
+    if exp is not None:
+        result["experience_years"] = exp
+    return result
 
 
 def load(db, workspace_id, fallback):
@@ -76,6 +182,19 @@ def ingest(db, workspace_id, body, fallback):
         raise ValueError("Document must contain non-whitespace text")
     profile.evidence.extend(chunks)
     profile.skills = sorted(set(profile.skills) | {skill for chunk in chunks for skill in chunk.skills})
+
+    # Apply heuristic structural fields only if they improve on the current values.
+    parsed = _parse_structure(body.text)
+    updated_parse_source = profile.parse_source
+    if "graduation_year" in parsed and profile.parse_source not in ("user-correction",):
+        profile = profile.model_copy(update={"graduation_year": parsed["graduation_year"]})
+        updated_parse_source = "heuristic-v1"
+    if "experience_years" in parsed and profile.experience_years is None:
+        profile = profile.model_copy(update={"experience_years": parsed["experience_years"]})
+        updated_parse_source = "heuristic-v1"
+    if updated_parse_source != profile.parse_source:
+        profile = profile.model_copy(update={"parse_source": updated_parse_source})
+
     if stored:
         stored.content = profile.model_dump(mode="json")
         stored.version += 1

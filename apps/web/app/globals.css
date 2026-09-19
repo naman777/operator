@@ -1096,7 +1096,10 @@ summary {
   background: #fafbfc;
   cursor: pointer;
   text-align: center;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
   min-height: 120px;
   user-select: none;
 }
@@ -1149,6 +1152,11 @@ summary {
   font-weight: 500;
 }
 @keyframes upload-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }

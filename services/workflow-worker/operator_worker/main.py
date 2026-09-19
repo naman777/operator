@@ -21,7 +21,12 @@ async def main():
                 client,
                 task_queue=TASK_QUEUE,
                 workflows=[OpportunityMissionWorkflow],
-                activities=[activities.execute_step, activities.mark_failed],
+                activities=[
+                    activities.execute_step,
+                    activities.mark_failed,
+                    activities.request_approval,
+                    activities.resolve_approval_wait,
+                ],
                 activity_executor=executor,
             ):
                 await dispatch_forever(client, sessions)
