@@ -3208,6 +3208,11 @@
             "type": "string",
             "title": "Case Id"
           },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "default": "matching"
+          },
           "job_title": {
             "type": "string",
             "title": "Job Title"
@@ -3235,6 +3240,49 @@
           "unsupported_positive_count": {
             "type": "integer",
             "title": "Unsupported Positive Count"
+          },
+          "expected_eligibility": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "eligible",
+                  "ineligible",
+                  "unknown"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Eligibility"
+          },
+          "actual_eligibility": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "eligible",
+                  "ineligible",
+                  "unknown"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Eligibility"
+          },
+          "eligibility_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Correct"
           },
           "latency_ms": {
             "type": "number",
@@ -3307,11 +3355,37 @@
             "minimum": 1.0,
             "title": "Case Count"
           },
+          "pass_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass Rate"
+          },
           "requirement_accuracy": {
             "type": "number",
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Requirement Accuracy"
+          },
+          "eligibility_accuracy": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligibility Accuracy"
           },
           "score_mae": {
             "type": "number",
@@ -3359,9 +3433,12 @@
           },
           "dataset_version": {
             "type": "string",
-            "const": "opportunity-v1",
+            "enum": [
+              "opportunity-v1",
+              "opportunity-v2"
+            ],
             "title": "Dataset Version",
-            "default": "opportunity-v1"
+            "default": "opportunity-v2"
           }
         },
         "additionalProperties": false,

@@ -1032,6 +1032,11 @@ export interface components {
             schema_version: "1.0";
             /** Case Id */
             case_id: string;
+            /**
+             * Category
+             * @default matching
+             */
+            category: string;
             /** Job Title */
             job_title: string;
             /** Passed */
@@ -1046,6 +1051,12 @@ export interface components {
             citation_coverage: number;
             /** Unsupported Positive Count */
             unsupported_positive_count: number;
+            /** Expected Eligibility */
+            expected_eligibility?: ("eligible" | "ineligible" | "unknown") | null;
+            /** Actual Eligibility */
+            actual_eligibility?: ("eligible" | "ineligible" | "unknown") | null;
+            /** Eligibility Correct */
+            eligibility_correct?: boolean | null;
             /** Latency Ms */
             latency_ms: number;
         };
@@ -1078,8 +1089,12 @@ export interface components {
             schema_version: "1.0";
             /** Case Count */
             case_count: number;
+            /** Pass Rate */
+            pass_rate?: number | null;
             /** Requirement Accuracy */
             requirement_accuracy: number;
+            /** Eligibility Accuracy */
+            eligibility_accuracy?: number | null;
             /** Score Mae */
             score_mae: number;
             /** Citation Coverage */
@@ -1099,10 +1114,10 @@ export interface components {
             schema_version: "1.0";
             /**
              * Dataset Version
-             * @default opportunity-v1
-             * @constant
+             * @default opportunity-v2
+             * @enum {string}
              */
-            dataset_version: "opportunity-v1";
+            dataset_version: "opportunity-v1" | "opportunity-v2";
         };
         /** EvalRunView */
         EvalRunView: {

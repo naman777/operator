@@ -344,12 +344,14 @@ class ImportReceipt(Contract):
 
 
 class EvalRunRequest(Contract):
-    dataset_version: Literal["opportunity-v1"] = "opportunity-v1"
+    dataset_version: Literal["opportunity-v1", "opportunity-v2"] = "opportunity-v2"
 
 
 class EvalMetrics(Contract):
     case_count: int = Field(ge=1)
+    pass_rate: float | None = Field(default=None, ge=0, le=1)
     requirement_accuracy: float = Field(ge=0, le=1)
+    eligibility_accuracy: float | None = Field(default=None, ge=0, le=1)
     score_mae: float = Field(ge=0, le=100)
     citation_coverage: float = Field(ge=0, le=1)
     unsupported_positive_rate: float = Field(ge=0, le=1)
@@ -358,6 +360,7 @@ class EvalMetrics(Contract):
 
 class EvalCaseResult(Contract):
     case_id: str
+    category: str = "matching"
     job_title: str
     passed: bool
     expected_score: float
@@ -365,6 +368,9 @@ class EvalCaseResult(Contract):
     requirement_accuracy: float
     citation_coverage: float
     unsupported_positive_count: int
+    expected_eligibility: Literal["eligible", "ineligible", "unknown"] | None = None
+    actual_eligibility: Literal["eligible", "ineligible", "unknown"] | None = None
+    eligibility_correct: bool | None = None
     latency_ms: float
 
 

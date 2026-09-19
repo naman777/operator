@@ -8,14 +8,21 @@ from operator_worker.analysis import match, verify
 
 from .schemas import CandidateProfile, JobPosting
 
-EVALUATOR_VERSION = "deterministic-v1"
-DATASET_VERSION = "opportunity-v1"
+EVALUATOR_VERSION = "deterministic-v2"
+DATASET_VERSION = "opportunity-v2"
+DATASET_VERSIONS = {"opportunity-v1", DATASET_VERSION}
 
 
 def load_dataset(root: Path, version: str = DATASET_VERSION) -> dict:
-    if version != DATASET_VERSION:
+    if version not in DATASET_VERSIONS:
         raise ValueError(f"Unknown evaluation dataset: {version}")
     return json.loads((root / "evals" / "datasets" / f"{version}.json").read_text(encoding="utf-8"))
+
+
+def _merged(base: dict, overrides: dict | None) -> dict:
+    value = dict(base)
+    value.update(overrides or {})
+    return value
 
 
 def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
@@ -32,9 +39,13 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
     total_latency = 0.0
 
     for case in dataset["cases"]:
-        job = JobPosting.model_validate_json((demo / case["job"]).read_text(encoding="utf-8"))
+        job_data = json.loads((demo / case["job"]).read_text(encoding="utf-8"))
+        job = JobPosting.model_validate(_merged(job_data, case.get("job_overrides")))
+        case_profile = CandidateProfile.model_validate(
+            _merged(profile.model_dump(mode="json"), case.get("profile_overrides"))
+        )
         started = time.perf_counter()
-        output = match(job, profile)
+        output = match(job, case_profile)
         verify(job, output)
         latency_ms = (time.perf_counter() - started) * 1000
         expected = case["expected"]
@@ -51,10 +62,14 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
         accuracy = correct / case_requirement_count
         coverage = cited / len(positive) if positive else 1.0
         score_error = abs(float(output["score"]) - float(expected["score"]))
-        passed = accuracy == 1 and score_error < 0.001 and unsupported == 0
+        eligibility_correct = output["eligibility"] == expected.get(
+            "eligibility", output["eligibility"]
+        )
+        passed = accuracy == 1 and score_error < 0.001 and unsupported == 0 and eligibility_correct
         results.append(
             {
                 "case_id": case["id"],
+                "category": case.get("category", "matching"),
                 "job_title": job.title,
                 "passed": passed,
                 "expected_score": expected["score"],
@@ -62,6 +77,9 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
                 "requirement_accuracy": accuracy,
                 "citation_coverage": coverage,
                 "unsupported_positive_count": unsupported,
+                "expected_eligibility": expected.get("eligibility"),
+                "actual_eligibility": output["eligibility"],
+                "eligibility_correct": eligibility_correct,
                 "latency_ms": round(latency_ms, 3),
             }
         )
@@ -76,7 +94,11 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
     count = len(results)
     metrics = {
         "case_count": count,
+        "pass_rate": sum(1 for item in results if item["passed"]) / count,
         "requirement_accuracy": correct_requirements / total_requirements,
+        "eligibility_accuracy": (
+            sum(1 for item in results if item["eligibility_correct"]) / count
+        ),
         "score_mae": absolute_score_error / count,
         "citation_coverage": total_citations / supported_requirements if supported_requirements else 1.0,
         "unsupported_positive_rate": (
@@ -88,9 +110,17 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
 
 
 def compare(baseline: dict, candidate: dict) -> dict:
-    higher_is_better = ("requirement_accuracy", "citation_coverage")
+    higher_is_better = ["requirement_accuracy", "citation_coverage"]
+    higher_is_better.extend(
+        key
+        for key in ("pass_rate", "eligibility_accuracy")
+        if baseline.get(key) is not None and candidate.get(key) is not None
+    )
     lower_is_better = ("score_mae", "unsupported_positive_rate", "mean_latency_ms")
-    deltas = {key: candidate[key] - baseline[key] for key in higher_is_better + lower_is_better}
+    deltas = {
+        key: candidate[key] - baseline[key]
+        for key in (*higher_is_better, *lower_is_better)
+    }
     regression = any(deltas[key] < -1e-9 for key in higher_is_better) or any(
         deltas[key] > 1e-9 for key in ("score_mae", "unsupported_positive_rate")
     )

@@ -317,3 +317,10 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Company research is carried into the final mission result, displayed with source links and retrieval times in the run inspector, and included in artifact citations and interview preparation.
 - Artifact generation verifies the research result against the completed checkpoint before saving drafts, preventing injected or changed research claims.
 - Validation: 100 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
+
+## Phase 7 continuation: expanded deterministic evaluation
+- Preserved the original three-case `opportunity-v1` baseline and added `opportunity-v2` with fifteen cases across matching, weak evidence, partial matches, weighted scoring, prompt-injection text, eligibility failures, eligibility ambiguity, and incomplete extraction.
+- Evaluation cases can apply isolated job and candidate overrides while still passing through the production Pydantic contracts, matcher, verifier, and eligibility engine.
+- Added case pass rate and eligibility accuracy, category labels, expected/actual eligibility results, and regression detection for the new quality metrics. Historical stored runs remain readable and comparable.
+- Updated Evaluation Lab to run v2 by default and display pass rate, eligibility accuracy, categories, and eligibility outcomes.
+- Validation: 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.

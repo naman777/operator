@@ -253,7 +253,7 @@ export default function Home() {
     try {
       const run = await api<EvalRun>("/v1/evals/runs", token, {
         method: "POST",
-        body: JSON.stringify({ dataset_version: "opportunity-v1" }),
+        body: JSON.stringify({ dataset_version: "opportunity-v2" }),
       });
       setEvalRuns((current) => [run, ...current]);
     } catch (e) {
@@ -768,17 +768,17 @@ export default function Home() {
                   onClick={runEvaluation}
                   disabled={evalBusy}
                 >
-                  {evalBusy ? "Running…" : "Run opportunity-v1"}
+                  {evalBusy ? "Running…" : "Run opportunity-v2"}
                 </button>
               </div>
               {evalRuns.length === 0 ? (
                 <section className="panel empty">
                   <h2>No measured runs yet</h2>
                   <p>
-                    Run the three-case baseline to record reproducible quality
-                    and latency metrics for the current matcher.
+                    Run the fifteen-case suite to record reproducible matching,
+                    eligibility, safety, provenance, and latency metrics.
                   </p>
-                  <span className="tag">DATASET opportunity-v1</span>
+                  <span className="tag">DATASET opportunity-v2</span>
                 </section>
               ) : (
                 <div className="eval-runs">
@@ -797,12 +797,28 @@ export default function Home() {
                       </div>
                       <div className="stats eval-stats">
                         <div>
+                          <small>CASE PASS RATE</small>
+                          <strong>
+                            {run.metrics.pass_rate == null
+                              ? "Legacy"
+                              : `${(run.metrics.pass_rate * 100).toFixed(0)}%`}
+                          </strong>
+                        </div>
+                        <div>
                           <small>REQUIREMENT ACCURACY</small>
                           <strong>
                             {(run.metrics.requirement_accuracy * 100).toFixed(
                               0,
                             )}
                             %
+                          </strong>
+                        </div>
+                        <div>
+                          <small>ELIGIBILITY ACCURACY</small>
+                          <strong>
+                            {run.metrics.eligibility_accuracy == null
+                              ? "Legacy"
+                              : `${(run.metrics.eligibility_accuracy * 100).toFixed(0)}%`}
                           </strong>
                         </div>
                         <div>
@@ -832,8 +848,11 @@ export default function Home() {
                               >
                                 {item.passed ? "PASS" : "FAIL"}
                               </span>{" "}
-                              {item.job_title}: score {item.actual_score} /
-                              expected {item.expected_score}
+                              [{item.category}] {item.job_title}: score{" "}
+                              {item.actual_score} / expected{" "}
+                              {item.expected_score}
+                              {item.expected_eligibility &&
+                                `; eligibility ${item.actual_eligibility} / expected ${item.expected_eligibility}`}
                             </p>
                           ))}
                         </div>
