@@ -176,3 +176,45 @@ def test_ingestion_persists_embeddings_and_retrieves_relevant_evidence(tmp_path)
             ids = relevant_ids(db, workspace_id, ["Python backend API"], limit_per_query=1)
             assert ids == [rows[0].id]
     engine.dispose()
+
+
+def test_evidence_deletion_updates_profile_and_vector_index_atomically(tmp_path):
+    url = f"sqlite:///{tmp_path / 'delete-vectors.db'}"
+    engine, sessions = database(url)
+    with TestClient(create_app(url)) as client:
+        guest = client.post("/v1/guest-sessions").json()
+        headers = {"Authorization": "Bearer " + guest["token"]}
+        other = {
+            "Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]
+        }
+        receipt = client.post(
+            "/v1/profile/documents",
+            headers=headers,
+            json={"name": "delete.txt", "text": "Built Python APIs with FastAPI."},
+        ).json()
+        state = client.get("/v1/profile/state", headers=headers).json()
+        target = next(
+            item for item in state["profile"]["evidence"] if item["document_id"] == receipt["document_id"]
+        )
+
+        assert (
+            client.delete(
+                f"/v1/evidence/{target['id']}", headers=other, params={"expected_version": 0}
+            ).status_code
+            == 404
+        )
+        deleted = client.delete(
+            f"/v1/evidence/{target['id']}", headers=headers, params={"expected_version": 1}
+        )
+        assert deleted.status_code == 200
+        assert deleted.json()["version"] == 2
+        assert target["id"] not in {item["id"] for item in deleted.json()["profile"]["evidence"]}
+        assert (
+            client.delete(
+                f"/v1/evidence/{target['id']}", headers=headers, params={"expected_version": 1}
+            ).status_code
+            == 409
+        )
+        with sessions() as db:
+            assert db.get(EvidenceChunk, target["id"]) is None
+    engine.dispose()

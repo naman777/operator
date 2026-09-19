@@ -287,6 +287,26 @@ def create_app(database_url=None):
     def evidence(ws: WS, db: DB):
         return profiles.load(db, ws.id, runtime.sample_profile).evidence
 
+    @app.delete("/v1/evidence/{evidence_id}", response_model=ProfileState)
+    def delete_evidence(
+        evidence_id: str,
+        ws: WS,
+        db: DB,
+        expected_version: Annotated[int, Query(ge=0)],
+    ):
+        try:
+            result = profiles.remove_evidence(
+                db, ws.id, evidence_id, expected_version, runtime.sample_profile
+            )
+            db.commit()
+            return result
+        except LookupError as exc:
+            db.rollback()
+            raise HTTPException(404, str(exc)) from exc
+        except RuntimeError as exc:
+            db.rollback()
+            raise HTTPException(409, str(exc)) from exc
+
     @app.get("/v1/demo/jobs", response_model=list[JobPosting])
     def jobs(ws: WS):
         return [JobPosting.model_validate_json(p.read_text()) for p in sorted(DATA.glob("job-*.json"))]

@@ -225,3 +225,33 @@ def retrieve(db, workspace_id, profile, requirements, limit_per_query=5):
     by_id = {item.id: item for item in profile.evidence}
     evidence = [by_id[item_id] for item_id in ids if item_id in by_id]
     return profile.model_copy(update={"evidence": evidence}) if evidence else profile
+
+
+def remove_evidence(db, workspace_id, evidence_id, expected_version, fallback):
+    lock(db, workspace_id)
+    stored = db.get(StoredProfile, workspace_id, populate_existing=True)
+    version = stored.version if stored else 0
+    if version != expected_version:
+        raise RuntimeError("Profile changed. Reload before deleting evidence.")
+    profile = load(db, workspace_id, fallback)
+    if all(item.id != evidence_id for item in profile.evidence):
+        raise LookupError("Evidence not found")
+    updated = profile.model_copy(
+        update={"evidence": [item for item in profile.evidence if item.id != evidence_id]}
+    )
+    indexed = db.scalar(
+        select(EvidenceChunk).where(
+            EvidenceChunk.id == evidence_id, EvidenceChunk.workspace_id == workspace_id
+        )
+    )
+    if indexed:
+        db.delete(indexed)
+    if stored:
+        stored.content = updated.model_dump(mode="json")
+        stored.version += 1
+    else:
+        stored = StoredProfile(
+            workspace_id=workspace_id, content=updated.model_dump(mode="json"), version=1
+        )
+        db.add(stored)
+    return {"profile": updated, "version": stored.version}

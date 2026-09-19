@@ -38,9 +38,11 @@ pnpm dev
 
 Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs. Temporal UI: http://127.0.0.1:8233.
 
-The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services. Migration 012 adds the model-call audit table; migration 013 adds the evidence vector index.
+The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services. Migration 012 adds the model-call audit table, migration 013 adds the evidence vector index, and migration 014 backfills previously ingested evidence.
 
 Evidence ingestion stores 256-dimensional deterministic embeddings beside chunk provenance. PostgreSQL uses pgvector cosine distance with an HNSW index; SQLite computes the same cosine ranking in-process for development and tests. Workflow matching snapshots the retrieved evidence before applying the reproducible token-overlap rubric. Existing profiles without indexed chunks safely fall back to their complete evidence list.
+
+`DELETE /v1/evidence/{evidence_id}?expected_version={version}` removes a workspace-owned evidence item from the profile and vector index atomically. Obtain the current version from `GET /v1/profile/state`; stale deletion requests return `409`.
 
 ### MCP server
 

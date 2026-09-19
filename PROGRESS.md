@@ -30,6 +30,12 @@ Updated: 2026-09-19
 - Validation: 96 Python tests passed (one opt-in Temporal test skipped), migration repeatability and concurrent ingestion passed, Ruff and formatting passed, four frontend tests and TypeScript checks passed, the production web build passed, and Compose configuration parsed successfully. PostgreSQL runtime execution remains pending because the configured Docker daemon is unavailable.
 - Backed up the ignored local SQLite database and applied migration 013; newly ingested evidence now enters the local vector index.
 
+### Checkpoint: evidence lifecycle and vector backfill
+- Implemented the planned workspace-scoped `DELETE /v1/evidence/{evidence_id}` API with optimistic profile-version checks and atomic removal from both stored profile evidence and the vector index.
+- Added migration 014 to backfill index rows for evidence ingested before migration 013 while preserving document, location, skill, and workspace provenance. Synthetic evidence without a stored source document remains on the safe full-profile fallback.
+- Regenerated OpenAPI and TypeScript declarations. Validation: 97 Python tests passed (one opt-in Temporal test skipped), migration repeatability, stale-version conflicts, workspace isolation, and vector deletion passed; Ruff, formatting, four frontend tests, TypeScript checks, and the production build passed.
+- Backed up the ignored local SQLite database and applied migration 014. The current database had no eligible stored-document chunks to backfill; future ingestion is indexed immediately.
+
 ## Current milestone
 Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 
