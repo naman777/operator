@@ -251,3 +251,11 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Replaced the Evaluation Lab placeholder with live run controls, metric cards, history, and case-level pass/fail results.
 - Updated README, product specification, and demo script to remove stale claims about completed ingestion and approval work.
 - Validation: 80 Python tests passed, Ruff passed, four frontend tests passed, TypeScript and Prettier checks passed, and the Next.js production build completed successfully.
+
+## Phase 5 continuation: authenticated MCP service
+- Added an MCP v2 stdio server with bounded tools for mission creation/status, pending approvals, approval resolution, and pipeline reads.
+- MCP calls delegate to the existing HTTP API so workspace ownership, validation, idempotency, and Temporal approval signaling are shared with the dashboard.
+- The workspace bearer token is supplied only through `OPERATOR_TOKEN`; it is never a tool parameter or model-visible schema field.
+- Added safe API-error translation, a local console entry point, sample MCP host configuration, and adapter tests covering authorization headers, idempotency, routes, invalid decisions, and sanitized failures.
+- Pinned MCP 2.2 and compatible SSE support; widened Uvicorn to the MCP-compatible supported range.
+- Validation: 83 Python tests passed, Ruff passed, the five MCP v2 tools registered successfully, and inspected input schemas contain no token field.

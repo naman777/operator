@@ -40,6 +40,29 @@ Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs. Temporal UI: h
 
 The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services.
 
+### MCP server
+
+The local stdio MCP service exposes `create_mission`, `get_mission_status`, `list_pending_approvals`, `resolve_approval`, and `list_applications`. It delegates to the authenticated product API, so workspace isolation and approval rules remain identical across the dashboard and MCP clients.
+
+Set `OPERATOR_TOKEN` to a token returned by `POST /v1/guest-sessions`, optionally set `OPERATOR_API_URL`, then configure an MCP host to launch:
+
+```json
+{
+  "mcpServers": {
+    "operator": {
+      "command": "python",
+      "args": ["-m", "operator_mcp.server"],
+      "env": {
+        "OPERATOR_API_URL": "http://127.0.0.1:8000",
+        "OPERATOR_TOKEN": "replace-with-workspace-token"
+      }
+    }
+  }
+}
+```
+
+The token is process configuration and is never included in a tool argument or model-visible schema.
+
 ### Docker
 
 ```sh
