@@ -89,9 +89,16 @@ def verify(job: JobPosting, matched: dict):
     expected = match(job, profile)
     if any(
         matched.get(key) != expected.get(key)
-        for key in ("score", "eligibility", "matches", "eligibility_checks")
+        for key in ("score", "eligibility", "eligibility_checks")
     ):
         raise ValueError("Stored match does not reproduce the deterministic rubric")
+    expected_matches = {item["requirement_id"]: item for item in expected["matches"]}
+    for item in matches:
+        deterministic = expected_matches[item.requirement_id]
+        if item.status != deterministic["status"] or sorted(item.evidence_ids) != sorted(
+            deterministic["evidence_ids"]
+        ):
+            raise ValueError("Stored match does not reproduce the deterministic evidence matrix")
     return {"verified": True, "requirements_checked": len(matches), "source_ids": sorted(sources)}
 
 

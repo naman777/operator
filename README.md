@@ -4,7 +4,7 @@ A personal work execution agent, starting with evidence-backed opportunity analy
 
 **Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
 
-Matching and drafts use deterministic rules/templates. Resume ingestion appends evidence and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. Vector embeddings, Agents SDK generation, real provider connectors, and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
+Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can review explanations and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. Vector embeddings, real provider connectors, and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
 
 ## Local setup
 
@@ -62,6 +62,10 @@ Set `OPERATOR_TOKEN` to a token returned by `POST /v1/guest-sessions`, optionall
 ```
 
 The token is process configuration and is never included in a tool argument or model-visible schema.
+
+### Optional model enrichment
+
+The worker makes no model calls unless `OPERATOR_MODEL_ENABLED=1`, `OPENAI_API_KEY`, and `OPERATOR_MODEL` are all set. It also requires the mission budget to cover `OPERATOR_MODEL_BUDGET_RESERVE_USD` (default `$0.10`). The adapter runs one tool-free turn per stage, caps prompt/output size, validates structured output, preserves deterministic scores and evidence mappings, and falls back locally on any model or validation error. See `.env.example` for the variables.
 
 ### Docker
 

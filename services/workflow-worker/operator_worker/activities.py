@@ -9,6 +9,8 @@ from operator_api import runtime, profiles
 from operator_api.schemas import JobPosting, CandidateProfile
 from operator_api.db import Approval, Mission, utcnow
 from .analysis import match, result, verify
+from .model_runtime import enabled as model_enabled
+from .model_runtime import enrich_matches, generate_drafts
 
 
 class Activities:
@@ -44,14 +46,25 @@ class Activities:
             elif name == "extracting":
                 payload = inputs["planning"]["job_posting"]
             elif name == "matching":
-                payload = match(
-                    JobPosting.model_validate(inputs["extracting"]),
-                    CandidateProfile.model_validate(inputs["planning"]["candidate_profile"]),
-                )
+                job = JobPosting.model_validate(inputs["extracting"])
+                profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
+                with self.sessions() as db:
+                    budget_usd = db.get(Mission, mission_id).budget_usd
+                payload = enrich_matches(job, profile, match(job, profile), budget_usd)
             elif name == "verifying":
                 payload = verify(JobPosting.model_validate(inputs["extracting"]), inputs["matching"])
             elif name == "generating":
                 payload = result(mission_id, inputs["matching"], inputs["verifying"])
+                job = JobPosting.model_validate(inputs["extracting"])
+                profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
+                with self.sessions() as db:
+                    budget_usd = db.get(Mission, mission_id).budget_usd
+                drafts = generate_drafts(job, profile, inputs["matching"], budget_usd)
+                payload["_model_calls"] = inputs["matching"].get("model_calls", 0) + int(
+                    model_enabled(budget_usd)
+                )
+                if drafts:
+                    payload["_model_drafts"] = drafts
             else:
                 raise ValueError("Unregistered fixture activity")
         except ValueError as exc:

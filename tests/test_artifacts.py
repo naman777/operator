@@ -79,6 +79,34 @@ def test_artifacts_generation_provenance_and_isolation(setup):
     assert client.get(f"/v1/artifacts/{data[0]['id']}").status_code == 401
 
 
+def test_validated_model_drafts_keep_immutable_citations_and_review_status(setup, monkeypatch):
+    client, headers, mid, sessions = setup
+    inputs = prepare(client, headers, mid, sessions)
+    evidence_id = inputs["matching"]["matches"][0]["evidence_ids"][0]
+    monkeypatch.setenv("OPERATOR_MODEL_ENABLED", "1")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("OPERATOR_MODEL", "test-model")
+    monkeypatch.setattr(
+        "operator_worker.activities.generate_drafts",
+        lambda *_args: {
+            "cover_letter": f"Model cover letter [{evidence_id}]",
+            "resume_suggestions": [f"Model resume suggestion [{evidence_id}]"],
+            "recruiter_message": f"Model recruiter message [{evidence_id}]",
+            "interview_brief": f"Model interview brief [{evidence_id}]",
+        },
+    )
+
+    generate(mid, sessions, inputs)
+    artifacts = client.get(f"/v1/missions/{mid}/artifacts", headers=headers).json()
+    assert len(artifacts) == 4
+    assert all(item["content"]["generation_method"] == "agents-sdk-v1" for item in artifacts)
+    assert all(item["content"]["needs_review"] is True for item in artifacts)
+    assert all(item["content"]["citations"] for item in artifacts)
+    events = client.get(f"/v1/missions/{mid}/events", headers=headers).json()
+    completed = next(item for item in events if item["type"] == "mission.completed")
+    assert completed["payload"]["model_calls"] == 1
+
+
 def test_completion_acknowledgement_replay_does_not_duplicate_artifacts(setup):
     client, headers, mid, sessions = setup
     inputs = prepare(client, headers, mid, sessions)

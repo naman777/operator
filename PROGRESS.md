@@ -2,6 +2,14 @@
 
 Updated: 2026-09-19
 
+### Checkpoint: guarded Agents SDK enrichment
+- Added an explicitly enabled, tool-free Agents SDK adapter with typed structured outputs for semantic explanation review and cited application drafting.
+- Deterministic eligibility, fit scores, statuses, and evidence mappings remain authoritative and reproducible; model output cannot introduce IDs or change those decisions.
+- Model drafts require known evidence citations, reject source-absent numeric claims, keep immutable citations and review status, and fall back to existing templates on configuration, provider, or validation failure.
+- Model execution requires a key, explicit model name, opt-in flag, and per-mission budget reserve. Live provider validation remains pending because no API key is configured.
+- Durable completion events record attempted model calls, including calls whose output was rejected in favor of the deterministic fallback.
+- Validation: 91 Python tests passed (one opt-in Temporal test skipped), Ruff passed, four frontend tests passed, and TypeScript checks passed. The installed Agents SDK accepted the configured typed Agent and one-turn Runner interface.
+
 ## Current milestone
 Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 

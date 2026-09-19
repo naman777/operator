@@ -18,6 +18,9 @@ def checkpoint(db, mission_id, name):
 
 
 def prepare(db, mission_id, payload):
+    payload = dict(payload)
+    model_drafts = payload.pop("_model_drafts", None)
+    payload.pop("_model_calls", None)
     report = MissionResult.model_validate(payload)
     if report.mission_id != mission_id or report.artifact_ids:
         raise ValueError("Invalid generation result identity")
@@ -111,4 +114,17 @@ def prepare(db, mission_id, payload):
             citations=citations,
         ),
     }
+    if model_drafts:
+        specs["cover_letter"] = specs["cover_letter"].model_copy(
+            update={"text": model_drafts["cover_letter"], "generation_method": "agents-sdk-v1"}
+        )
+        specs["resume_suggestions"] = specs["resume_suggestions"].model_copy(
+            update={"suggestions": model_drafts["resume_suggestions"], "generation_method": "agents-sdk-v1"}
+        )
+        specs["recruiter_message"] = specs["recruiter_message"].model_copy(
+            update={"text": model_drafts["recruiter_message"], "generation_method": "agents-sdk-v1"}
+        )
+        specs["interview_brief"] = specs["interview_brief"].model_copy(
+            update={"text": model_drafts["interview_brief"], "generation_method": "agents-sdk-v1"}
+        )
     return report, job, specs

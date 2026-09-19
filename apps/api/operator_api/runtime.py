@@ -252,6 +252,7 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
         if mission.status == "completed":
             return {"stopped": True}
         if name == "generating":
+            model_calls = int(payload.get("_model_calls", 0))
             report, job, drafts = prepare_artifacts(db, mission_id, payload)
             # Serialize pipeline upserts for different missions targeting the same workspace/job.
             db.execute(
@@ -342,7 +343,7 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
                 {
                     "score": payload["score"],
                     "execution_mode": "synthetic-fixture",
-                    "model_calls": 0,
+                    "model_calls": model_calls,
                     "cost_usd": 0,
                     "artifact_ids": payload["artifact_ids"],
                     "artifact_status": "draft",
