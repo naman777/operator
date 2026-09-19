@@ -76,6 +76,9 @@ class Activities:
             elif name == "matching":
                 job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
+                with self.sessions() as db:
+                    mission = db.get(Mission, mission_id)
+                    profile = profiles.retrieve(db, mission.workspace_id, profile, job.requirements)
                 budget_usd = self.remaining_budget(mission_id)
                 with capture_usage() as usage:
                     payload = enrich_matches(job, profile, match(job, profile), budget_usd)

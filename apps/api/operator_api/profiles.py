@@ -9,7 +9,8 @@ import hashlib
 import re
 from uuid import uuid4
 from sqlalchemy import select, update
-from .db import ProfileDocument, StoredProfile, Workspace
+from .db import EvidenceChunk, ProfileDocument, StoredProfile, Workspace
+from .embeddings import embed, relevant_ids
 from .schemas import CandidateProfile, Evidence
 
 SKILLS = (
@@ -157,6 +158,7 @@ def ingest(db, workspace_id, body, fallback):
         id=str(uuid4()), workspace_id=workspace_id, checksum=checksum, name=body.name, text=body.text
     )
     db.add(document)
+    db.flush()
     chunks = []
     for line_number, line in enumerate(body.text.splitlines(), 1):
         text = line.strip()
@@ -201,4 +203,25 @@ def ingest(db, workspace_id, body, fallback):
     else:
         stored = StoredProfile(workspace_id=workspace_id, content=profile.model_dump(mode="json"), version=1)
         db.add(stored)
+    for chunk in chunks:
+        db.add(
+            EvidenceChunk(
+                id=chunk.id,
+                workspace_id=workspace_id,
+                document_id=chunk.document_id,
+                text=chunk.text,
+                source_location=chunk.source_location,
+                skills=chunk.skills,
+                embedding=embed(chunk.text + " " + " ".join(chunk.skills)),
+            )
+        )
     return {"document_id": document.id, "evidence_count": len(chunks), "profile_version": stored.version}
+
+
+def retrieve(db, workspace_id, profile, requirements, limit_per_query=5):
+    ids = relevant_ids(db, workspace_id, [item.text for item in requirements], limit_per_query)
+    if not ids:
+        return profile
+    by_id = {item.id: item for item in profile.evidence}
+    evidence = [by_id[item_id] for item_id in ids if item_id in by_id]
+    return profile.model_copy(update={"evidence": evidence}) if evidence else profile

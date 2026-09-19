@@ -15,6 +15,7 @@ from sqlalchemy import (
     event,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from pgvector.sqlalchemy import Vector
 
 
 def utcnow():
@@ -203,6 +204,17 @@ class ProfileDocument(Base):
     text: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     __table_args__ = (UniqueConstraint("workspace_id", "checksum"),)
+
+
+class EvidenceChunk(Base):
+    __tablename__ = "evidence_chunks"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("profile_documents.id"), index=True)
+    text: Mapped[str] = mapped_column(String)
+    source_location: Mapped[str] = mapped_column(String)
+    skills: Mapped[list] = mapped_column(JSON)
+    embedding: Mapped[list] = mapped_column(Vector(256))
 
 
 class ImportedJob(Base):

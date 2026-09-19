@@ -1,6 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
 from fastapi.testclient import TestClient
 from operator_api.main import create_app
+from sqlalchemy import select
+
+from operator_api.db import EvidenceChunk, database
+from operator_api.embeddings import cosine, embed, relevant_ids
 
 
 def test_ingestion_corrections_isolation_and_conflicts(tmp_path):
@@ -145,3 +149,30 @@ def test_user_correction_takes_precedence_over_heuristic(tmp_path):
         profile = client.get("/v1/profile", headers=headers).json()
         # The user correction (2025) must be preserved.
         assert profile["graduation_year"] == 2025
+
+
+def test_ingestion_persists_embeddings_and_retrieves_relevant_evidence(tmp_path):
+    url = f"sqlite:///{tmp_path / 'vectors.db'}"
+    engine, sessions = database(url)
+    with TestClient(create_app(url)) as client:
+        guest = client.post("/v1/guest-sessions").json()
+        headers = {"Authorization": "Bearer " + guest["token"]}
+        workspace_id = guest["workspace"]["id"]
+        receipt = client.post(
+            "/v1/profile/documents",
+            headers=headers,
+            json={
+                "name": "resume.txt",
+                "text": "Built Python FastAPI backend services.\nDesigned watercolor landscape illustrations.",
+            },
+        ).json()
+        with sessions() as db:
+            rows = db.scalars(
+                select(EvidenceChunk).where(EvidenceChunk.document_id == receipt["document_id"])
+            ).all()
+            assert len(rows) == 2
+            assert len(rows[0].embedding) == 256
+            assert cosine(rows[0].embedding, embed(rows[0].text)) > 0.5
+            ids = relevant_ids(db, workspace_id, ["Python backend API"], limit_per_query=1)
+            assert ids == [rows[0].id]
+    engine.dispose()

@@ -23,6 +23,13 @@ Updated: 2026-09-19
 - Validation: 95 Python tests passed (one opt-in Temporal test skipped), migration repeatability and workspace isolation passed, Ruff and formatting passed, four frontend tests and TypeScript checks passed, and the production web build passed. Live provider validation remains pending because no API key is configured.
 - Backed up the ignored local SQLite database and applied migrations through 012; the model-call table is available to the current development stack.
 
+### Checkpoint: pgvector evidence retrieval
+- Added migration 013 and relational evidence chunks containing source provenance, detected skills, and 256-dimensional deterministic feature-hash embeddings.
+- PostgreSQL retrieval uses pgvector cosine distance and an HNSW cosine index. SQLite uses equivalent in-process cosine ranking so local tests and development require no external model or database service.
+- Resume ingestion writes documents, profile evidence, and vectors atomically. The matching step snapshots top evidence per requirement before running the existing deterministic rubric; profiles without indexed chunks retain the full-evidence fallback.
+- Validation: 96 Python tests passed (one opt-in Temporal test skipped), migration repeatability and concurrent ingestion passed, Ruff and formatting passed, four frontend tests and TypeScript checks passed, the production web build passed, and Compose configuration parsed successfully. PostgreSQL runtime execution remains pending because the configured Docker daemon is unavailable.
+- Backed up the ignored local SQLite database and applied migration 013; newly ingested evidence now enters the local vector index.
+
 ## Current milestone
 Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 

@@ -4,7 +4,7 @@ A personal work execution agent, starting with evidence-backed opportunity analy
 
 **Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
 
-Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can extract source-backed requirements, review explanations, and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. Vector embeddings, real provider connectors, and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
+Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can extract source-backed requirements, review explanations, and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence, persists provenance-preserving feature-hash embeddings, and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. Real provider connectors and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
 
 ## Local setup
 
@@ -38,7 +38,9 @@ pnpm dev
 
 Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs. Temporal UI: http://127.0.0.1:8233.
 
-The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services. Migration 012 adds the model-call audit table.
+The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services. Migration 012 adds the model-call audit table; migration 013 adds the evidence vector index.
+
+Evidence ingestion stores 256-dimensional deterministic embeddings beside chunk provenance. PostgreSQL uses pgvector cosine distance with an HNSW index; SQLite computes the same cosine ranking in-process for development and tests. Workflow matching snapshots the retrieved evidence before applying the reproducible token-overlap rubric. Existing profiles without indexed chunks safely fall back to their complete evidence list.
 
 ### MCP server
 
