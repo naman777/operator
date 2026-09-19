@@ -985,6 +985,24 @@ summary {
   max-height: 360px;
   overflow-y: auto;
 }
+.artifact-edit-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 18px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.artifact-edit-textarea:focus {
+  border-color: var(--accent);
+}
 .suggestions-list {
   padding-left: 20px;
   list-style: decimal;
@@ -1063,4 +1081,74 @@ summary {
   border-left: 2px solid #c7dfd2;
   font-size: 12px;
   line-height: 1.8;
+}
+
+/* ── Resume upload zone ───────────────────────────────────────────────────── */
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: #fafbfc;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  min-height: 120px;
+  user-select: none;
+}
+.upload-zone:hover,
+.upload-zone:focus-visible {
+  border-color: var(--green);
+  background: var(--light);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(36, 123, 97, 0.15);
+}
+.upload-zone--dragging {
+  border-color: var(--green);
+  background: var(--light);
+  box-shadow: 0 0 0 4px rgba(36, 123, 97, 0.2);
+}
+.upload-zone--done {
+  border-color: var(--green);
+  background: var(--light);
+}
+.upload-zone--error {
+  border-color: #c0392b;
+  background: #fff5f4;
+}
+.upload-zone__icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.upload-zone__label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+.upload-zone__sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.upload-zone__spinner {
+  font-size: 13px;
+  color: var(--muted);
+  animation: upload-pulse 1.4s ease-in-out infinite;
+}
+.upload-zone__success {
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 500;
+}
+.upload-zone__error-msg {
+  font-size: 13px;
+  color: #c0392b;
+  font-weight: 500;
+}
+@keyframes upload-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

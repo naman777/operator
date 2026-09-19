@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -43,6 +43,7 @@ from .schemas import (
     ApprovalResolution,
     ApprovalView,
     ApplicationView,
+    ArtifactUpdate,
     ArtifactView,
     FailureSimulation,
     RunView,
@@ -56,12 +57,31 @@ from .schemas import (
     WorkspaceView,
 )
 
-from . import runtime, streaming, profiles, extraction
+from . import runtime, streaming, profiles, extraction, document_parser
 
 configure_logging()
 logger = logging.getLogger("operator.api")
 DATA = Path(os.getenv("OPERATOR_DATA_DIR", str(Path(__file__).resolve().parents[3] / "data" / "demo")))
 GUEST_TTL_HOURS = 24
+_TEMPORAL_CLIENT = None
+
+
+async def _get_temporal_client():
+    """Lazy Temporal client singleton; falls back gracefully if the server is unreachable."""
+    global _TEMPORAL_CLIENT
+    if _TEMPORAL_CLIENT is not None:
+        return _TEMPORAL_CLIENT
+    try:
+        from temporalio.client import Client
+        from datetime import timedelta as _td
+        _TEMPORAL_CLIENT = await Client.connect(
+            os.getenv("TEMPORAL_ADDRESS", "127.0.0.1:7233"),
+            rpc_timeout=_td(seconds=2),
+        )
+    except Exception as exc:
+        logger.warning("Temporal unavailable; approval signals will be skipped: %s", type(exc).__name__)
+        return None
+    return _TEMPORAL_CLIENT
 
 
 def create_app(database_url=None):
@@ -198,6 +218,43 @@ def create_app(database_url=None):
 
     @app.post("/v1/profile/documents", response_model=DocumentReceipt, status_code=201)
     def ingest_document(body: DocumentInput, ws: WS, db: DB):
+        try:
+            receipt = profiles.ingest(db, ws.id, body, runtime.sample_profile)
+            db.commit()
+            return receipt
+        except ValueError as exc:
+            db.rollback()
+            raise HTTPException(422, str(exc)) from exc
+
+    _MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    @app.post("/v1/profile/documents/upload", response_model=DocumentReceipt, status_code=201)
+    async def upload_document(
+        ws: WS,
+        db: DB,
+        file: UploadFile = File(...),
+        name: str | None = None,
+    ):
+        """Upload a PDF or DOCX resume and ingest its extracted text as evidence."""
+        raw = await file.read(_MAX_UPLOAD_BYTES + 1)
+        if len(raw) > _MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "File exceeds the 5 MB limit. Please reduce the file size.")
+        filename = file.filename or "upload"
+        fmt = document_parser.detect_format(filename, raw)
+        if fmt is None:
+            raise HTTPException(
+                422,
+                "Unsupported file type. Only PDF (.pdf) and DOCX (.docx) files are accepted.",
+            )
+        try:
+            if fmt == "pdf":
+                text = document_parser.extract_pdf(raw)
+            else:
+                text = document_parser.extract_docx(raw)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        doc_name = (name or filename)[:200]
+        body = DocumentInput(name=doc_name, text=text)
         try:
             receipt = profiles.ingest(db, ws.id, body, runtime.sample_profile)
             db.commit()
@@ -414,7 +471,30 @@ def create_app(database_url=None):
         approval.status = "approved"
         approval.resolved_at = utcnow()
         approval.resolved_by = "user"
+        workflow_id = approval.workflow_id
         db.commit()
+        # Send the Temporal signal after the DB commit so the signal is only
+        # delivered once the approval is durably persisted.
+        if workflow_id:
+            import asyncio
+
+            async def _signal():
+                client = await _get_temporal_client()
+                if client:
+                    try:
+                        handle = client.get_workflow_handle(workflow_id)
+                        await handle.signal("approval_resolved", True)
+                    except Exception as exc:
+                        logger.warning("Approval signal failed: %s", type(exc).__name__)
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(_signal())
+                else:
+                    loop.run_until_complete(_signal())
+            except Exception as exc:
+                logger.warning("Could not dispatch approval signal: %s", type(exc).__name__)
         return approval
 
     @app.post("/v1/approvals/{approval_id}/reject", response_model=ApprovalView)
@@ -425,7 +505,28 @@ def create_app(database_url=None):
         approval.status = "rejected"
         approval.resolved_at = utcnow()
         approval.resolved_by = "user"
+        workflow_id = approval.workflow_id
         db.commit()
+        if workflow_id:
+            import asyncio
+
+            async def _signal():
+                client = await _get_temporal_client()
+                if client:
+                    try:
+                        handle = client.get_workflow_handle(workflow_id)
+                        await handle.signal("approval_resolved", False)
+                    except Exception as exc:
+                        logger.warning("Rejection signal failed: %s", type(exc).__name__)
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(_signal())
+                else:
+                    loop.run_until_complete(_signal())
+            except Exception as exc:
+                logger.warning("Could not dispatch rejection signal: %s", type(exc).__name__)
         return approval
 
     # ---------------------------------------------------------------------------
@@ -447,6 +548,32 @@ def create_app(database_url=None):
         if not found:
             raise HTTPException(404, "Artifact not found")
         return found
+
+    @app.patch("/v1/artifacts/{artifact_id}", response_model=ArtifactView)
+    def revise_artifact(artifact_id: str, body: ArtifactUpdate, db: DB, ws: WS):
+        """Submit a revised draft. Creates a new versioned artifact and marks the old one superseded."""
+        old = db.scalar(select(Artifact).where(Artifact.id == artifact_id, Artifact.workspace_id == ws.id))
+        if not old:
+            raise HTTPException(404, "Artifact not found")
+        if old.status == "superseded":
+            raise HTTPException(409, "Cannot revise a superseded artifact. Use the latest version.")
+        if body.expected_version != old.version:
+            raise HTTPException(409, f"Version conflict: expected {old.version}, got {body.expected_version}.")
+        new_artifact = Artifact(
+            id=str(uuid4()),
+            mission_id=old.mission_id,
+            workspace_id=ws.id,
+            type=old.type,
+            version=old.version + 1,
+            content=body.content.model_dump(mode="json"),
+            status="draft",
+        )
+        db.add(new_artifact)
+        db.flush()
+        old.superseded_by = new_artifact.id
+        old.status = "superseded"
+        db.commit()
+        return new_artifact
 
     @app.post("/v1/opportunities/import", response_model=ImportReceipt, status_code=201)
     def import_job(body: OpportunityImport, db: DB, ws: WS):

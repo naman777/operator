@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 
 ## Current milestone
-Durable workflow, profile correction/plain-text evidence ingestion, guarded static public-job imports, eligibility checks, and four cited drafts are implemented. Next: structured resume parsing, embeddings/semantic matching, browser extraction, and durable approvals.
+PDF and DOCX resume file upload ingestion is implemented. Next: chunk and embed evidence with pgvector (semantic matching), real LLM-backed matching, browser extraction, durable Temporal approval signals.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -48,7 +48,7 @@ Durable workflow, profile correction/plain-text evidence ingestion, guarded stat
 
 ## In progress / next work
 Phase 4 is in progress (plain-text ingestion and static public snapshots completed):
-1. Extend profile ingestion to PDF/DOCX and parse resume into structured education, skills, experience, dates, and preferences.
+1. ~~Extend profile ingestion to PDF/DOCX and parse resume into structured education, skills, experience, dates, and preferences.~~ **Done.**
 2. Chunk and embed evidence with provenance (pgvector).
 3. Feed real, source-backed job constraints and ingested profile data into the implemented deterministic eligibility checks.
 4. Replace exact fixture skill matching with structured semantic matching while preserving the reproducible score and evidence matrix.
@@ -212,3 +212,18 @@ Documentation updated with current startup commands, accurate limitations, and t
 - `2695773`: public import UI and source-aware inspector.
 
 Native database backed up before migrations 005/006; API, worker and dashboard restarted. Full-stack HTTP smoke passed (guest session, dispatch, retry recovery, SSE, four cited drafts, pipeline and cancellation). Local dashboard: http://127.0.0.1:3000. No changes pushed or deployed.
+
+## Phase 4 continuation: PDF/DOCX resume upload ingestion
+- Added `pypdf`, `python-docx`, and `python-multipart` as production dependencies.
+- Added `apps/api/operator_api/document_parser.py`: `extract_pdf(bytes)` and `extract_docx(bytes)` work entirely in-memory via `io.BytesIO`; no temp files; both raise `ValueError` with a user-safe message on failure.
+- Added `POST /v1/profile/documents/upload` multipart endpoint: 5 MB limit, PDF/DOCX format detection by extension and magic bytes, same `DocumentReceipt` response as the text endpoint, feeds directly into the existing `profiles.ingest()` pipeline including heuristic structural parsing (graduation year, experience years, skill detection, line/char provenance, checksum deduplication).
+- Added drag-and-drop / click-to-browse file upload zone to the profile editor: idle, uploading (pulse animation), done (evidence count), and error states.
+- Added upload zone CSS to `globals.css`.
+- Validation: 64 Python tests passed (7 new upload tests: PDF happy path, DOCX happy path, oversized 413, unsupported type 422, deduplication, structural parse from PDF, auth guard). Ruff clean. TypeScript typecheck clean. Next.js production build passed.
+
+### Continuation checkpoint map
+- `6c97e3e`: persistent versioned profiles and source evidence.
+- `e56a977`: profile correction and resume evidence UI.
+- `d17ecb8`: guarded public job snapshot ingestion and workflow integration.
+- `2695773`: public import UI and source-aware inspector.
+- `PENDING`: PDF/DOCX upload ingestion and file upload UI.
