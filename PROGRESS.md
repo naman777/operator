@@ -310,3 +310,10 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added migration 011, Playwright runtime dependency, generated contracts, browser-launch smoke coverage, fallback persistence tests, request-guard tests, and workspace-isolation checks.
 - API/worker container builds now include the MCP package required by project metadata and install Chromium with its system dependencies.
 - Validation: real headless Chromium launch and screenshot smoke passed; 87 Python tests, Ruff, four frontend tests, TypeScript, formatting, and the Next.js production build passed.
+
+## Phase 4 continuation: cited official-company research
+- Added a durable `researching` checkpoint between extraction and matching. It follows only an explicit HTTPS company URL from the job posting and reuses the guarded, pinned-IP transport.
+- Extracted claims are bounded to exact meta-description and Organization JSON-LD excerpts. Every claim must reference a stored source; retrieval failures and postings without an official URL safely produce an empty research result.
+- Company research is carried into the final mission result, displayed with source links and retrieval times in the run inspector, and included in artifact citations and interview preparation.
+- Artifact generation verifies the research result against the completed checkpoint before saving drafts, preventing injected or changed research claims.
+- Validation: 100 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.

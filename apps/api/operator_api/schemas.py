@@ -80,6 +80,7 @@ class JobPosting(Contract):
     id: str
     title: str
     company: str
+    company_url: HttpUrl | None = None
     url: HttpUrl
     location: str | None = None
     requirements: list[Requirement]
@@ -128,6 +129,26 @@ class EligibilityCheck(Contract):
     required_value: str | None = None
 
 
+class ResearchClaim(Contract):
+    text: str
+    source_id: str
+
+
+class CompanyResearch(Contract):
+    company: str
+    claims: list[ResearchClaim] = Field(default_factory=list)
+    sources: list[Source] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def claims_have_sources(self):
+        source_ids = {source.id for source in self.sources}
+        if len(source_ids) != len(self.sources):
+            raise ValueError("Company research source ids must be unique")
+        if any(claim.source_id not in source_ids for claim in self.claims):
+            raise ValueError("Company claim references an unknown source id")
+        return self
+
+
 class MissionResult(Contract):
     mission_id: str
     eligibility: Literal["eligible", "ineligible", "unknown"]
@@ -136,6 +157,7 @@ class MissionResult(Contract):
     rubric_version: Literal["1.0"] = "1.0"
     matches: list[RequirementMatch]
     source_ids: list[str]
+    company_research: CompanyResearch | None = None
     artifact_ids: list[str]
 
 
@@ -254,7 +276,7 @@ class ExternalActionView(Contract):
 
 
 class ArtifactCitation(Contract):
-    kind: Literal["candidate", "job"]
+    kind: Literal["candidate", "job", "company"]
     reference_id: str
     excerpt: str
     document_id: str | None = None

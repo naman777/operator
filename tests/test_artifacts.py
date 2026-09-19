@@ -26,7 +26,7 @@ def setup(tmp_path):
 def prepare(client, headers, mid, sessions):
     assert client.post(f"/v1/missions/{mid}/start", headers=headers).status_code == 202
     outputs = {}
-    for name in ("planning", "extracting", "matching", "verifying"):
+    for name in ("planning", "extracting", "researching", "matching", "verifying"):
         outputs[name] = ActivityEnvironment().run(
             Activities(sessions).execute_step,
             {"mission_id": mid, "run_number": 1, "step": name, "inputs": outputs},

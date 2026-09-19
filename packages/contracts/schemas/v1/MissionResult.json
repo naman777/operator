@@ -1,5 +1,39 @@
 {
   "$defs": {
+    "CompanyResearch": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "company": {
+          "title": "Company",
+          "type": "string"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/ResearchClaim"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/Source"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "company"
+      ],
+      "title": "CompanyResearch",
+      "type": "object"
+    },
     "EligibilityCheck": {
       "additionalProperties": false,
       "properties": {
@@ -101,6 +135,87 @@
       ],
       "title": "RequirementMatch",
       "type": "object"
+    },
+    "ResearchClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "source_id"
+      ],
+      "title": "ResearchClaim",
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retrieved At"
+        },
+        "synthetic": {
+          "default": false,
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "url",
+        "title",
+        "excerpt"
+      ],
+      "title": "Source",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -156,6 +271,17 @@
       },
       "title": "Source Ids",
       "type": "array"
+    },
+    "company_research": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CompanyResearch"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "artifact_ids": {
       "items": {

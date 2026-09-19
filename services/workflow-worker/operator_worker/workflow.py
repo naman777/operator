@@ -35,7 +35,7 @@ class OpportunityMissionWorkflow:
             maximum_attempts=3,
         )
 
-        for step in ("planning", "extracting", "matching", "verifying"):
+        for step in ("planning", "extracting", "researching", "matching", "verifying"):
             activity_input = {**request, "step": step, "inputs": outputs}
             try:
                 output = await workflow.execute_activity(

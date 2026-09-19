@@ -132,7 +132,14 @@ def test_import_persistence_workspace_isolation_and_workflow(tmp_path):
         ).json()["id"]
         assert client.post(f"/v1/missions/{mid}/start", headers=headers).status_code == 202
         outputs = {}
-        for step in ("planning", "extracting", "matching", "verifying", "generating"):
+        for step in (
+            "planning",
+            "extracting",
+            "researching",
+            "matching",
+            "verifying",
+            "generating",
+        ):
             outputs[step] = ActivityEnvironment().run(
                 Activities(sessions).execute_step,
                 {"mission_id": mid, "run_number": 1, "step": step, "inputs": outputs},

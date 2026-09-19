@@ -2,7 +2,14 @@
 
 from sqlalchemy import select
 from .db import MissionStep, StepOutput
-from .schemas import ArtifactCitation, ArtifactContent, CandidateProfile, JobPosting, MissionResult
+from .schemas import (
+    ArtifactCitation,
+    ArtifactContent,
+    CandidateProfile,
+    CompanyResearch,
+    JobPosting,
+    MissionResult,
+)
 
 
 def checkpoint(db, mission_id, name):
@@ -29,12 +36,15 @@ def prepare(db, mission_id, payload):
     job_payload.pop("_model_fallback", None)
     job = JobPosting.model_validate(job_payload)
     matched = checkpoint(db, mission_id, "matching")
+    researched = CompanyResearch.model_validate(checkpoint(db, mission_id, "researching"))
     verified = checkpoint(db, mission_id, "verifying")
     if verified.get("verified") is not True:
         raise ValueError("Artifact generation requires verified evidence")
     for key in ("matches", "score", "eligibility", "eligibility_checks"):
         if report.model_dump(mode="json")[key] != matched.get(key, []):
             raise ValueError("Report does not match the stored analysis")
+    if report.company_research != researched:
+        raise ValueError("Company research does not match the stored checkpoint")
     source_ids = {source.id for source in job.sources}
     if set(report.source_ids) != source_ids or set(verified.get("source_ids", [])) != source_ids:
         raise ValueError("Report sources do not match the verified job")
@@ -73,6 +83,16 @@ def prepare(db, mission_id, payload):
         )
         for eid, requirement_ids in used.items()
     )
+    if report.company_research:
+        for company_source in report.company_research.sources:
+            citations.append(
+                ArtifactCitation(
+                    kind="company",
+                    reference_id=company_source.id,
+                    excerpt=company_source.excerpt,
+                    url=company_source.url,
+                )
+            )
     evidence_text = "\n\n".join(f"{evidence[eid].text} [{eid}]" for eid in used)
     evidence_paragraph = evidence_text or "I would appreciate the opportunity to learn more about the role."
     suggestions = [
@@ -94,6 +114,11 @@ def prepare(db, mission_id, payload):
                 if match.status == "supported"
                 else "review this gap; do not claim experience that is not documented."
             )
+        )
+    if report.company_research and report.company_research.claims:
+        preparation.append("\nCompany research (verify against cited official sources):")
+        preparation.extend(
+            f"- {claim.text} [{claim.source_id}]" for claim in report.company_research.claims
         )
     specs = {
         "cover_letter": ArtifactContent(

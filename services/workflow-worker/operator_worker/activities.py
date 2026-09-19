@@ -5,7 +5,7 @@ from datetime import timedelta
 from uuid import uuid4
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
-from operator_api import runtime, profiles
+from operator_api import runtime, profiles, research
 from operator_api.schemas import JobPosting, CandidateProfile
 from operator_api.db import Approval, Mission, ModelCall, utcnow
 from sqlalchemy import func, select
@@ -73,6 +73,8 @@ class Activities:
                 self.record_usage(mission_id, name, usage)
                 payload = posting.model_dump(mode="json")
                 payload.update({"_model_calls": model_calls, "_model_fallback": fallback})
+            elif name == "researching":
+                payload = research.company(job_from_step(inputs["extracting"])).model_dump(mode="json")
             elif name == "matching":
                 job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
@@ -89,7 +91,12 @@ class Activities:
             elif name == "verifying":
                 payload = verify(job_from_step(inputs["extracting"]), inputs["matching"])
             elif name == "generating":
-                payload = result(mission_id, inputs["matching"], inputs["verifying"])
+                payload = result(
+                    mission_id,
+                    inputs["matching"],
+                    inputs["verifying"],
+                    inputs.get("researching"),
+                )
                 job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
                 budget_usd = self.remaining_budget(mission_id)

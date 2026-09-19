@@ -786,7 +786,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "candidate" | "job";
+            kind: "candidate" | "job" | "company";
             /** Reference Id */
             reference_id: string;
             /** Excerpt */
@@ -926,6 +926,21 @@ export interface components {
              * @enum {string}
              */
             parse_source: "synthetic" | "user-correction" | "heuristic-v1";
+        };
+        /** CompanyResearch */
+        CompanyResearch: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Company */
+            company: string;
+            /** Claims */
+            claims?: components["schemas"]["ResearchClaim"][];
+            /** Sources */
+            sources?: components["schemas"]["Source"][];
         };
         /** DocumentInput */
         DocumentInput: {
@@ -1263,6 +1278,8 @@ export interface components {
             title: string;
             /** Company */
             company: string;
+            /** Company Url */
+            company_url?: string | null;
             /**
              * Url
              * Format: uri
@@ -1334,6 +1351,7 @@ export interface components {
             matches: components["schemas"]["RequirementMatch"][];
             /** Source Ids */
             source_ids: string[];
+            company_research?: components["schemas"]["CompanyResearch"] | null;
             /** Artifact Ids */
             artifact_ids: string[];
         };
@@ -1491,6 +1509,19 @@ export interface components {
             evidence_ids: string[];
             /** Explanation */
             explanation: string;
+        };
+        /** ResearchClaim */
+        ResearchClaim: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Text */
+            text: string;
+            /** Source Id */
+            source_id: string;
         };
         /** RunView */
         RunView: {

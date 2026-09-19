@@ -248,6 +248,21 @@
       "title": "Company",
       "type": "string"
     },
+    "company_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Company Url"
+    },
     "url": {
       "format": "uri",
       "maxLength": 2083,

@@ -4,7 +4,7 @@ A personal work execution agent, starting with evidence-backed opportunity analy
 
 **Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
 
-Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can extract source-backed requirements, review explanations, and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence, persists provenance-preserving feature-hash embeddings, and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. Real provider connectors and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
+Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can extract source-backed requirements, review explanations, and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence, persists provenance-preserving feature-hash embeddings, and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. When the posting identifies an official company HTTPS URL, a separate checkpoint collects exact description claims and carries their citations into the report and artifacts. Real provider connectors and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
 
 ## Local setup
 
@@ -86,11 +86,11 @@ Compose defines web, API, workflow worker, PostgreSQL/pgvector, Redis, Temporal,
 1. Open a guest workspace and choose Northstar.
 2. Save the mission, then start the sample run.
 3. Optionally select an exhausted failure before starting; watch the failed matching step, then retry it.
-4. Inspect step outputs, evidence matches, and eligibility explanations. Missing constraints stay unknown.
+4. Inspect step outputs, official-company research, evidence matches, and eligibility explanations. Missing constraints stay unknown.
 5. Review the cover letter, resume suggestions, recruiter message, and interview brief, including their citations.
 6. Open Application Pipeline. The role is saved locally; nothing has been submitted.
 
-Drafts have immutable version-1 records and require review. Editing, later versions, and diffs are not implemented yet.
+Drafts have immutable version records and require review. Saving an edit creates a new version and supersedes the prior draft; visual diffs are not implemented yet.
 
 ## Validation
 

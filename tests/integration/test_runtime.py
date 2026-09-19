@@ -34,7 +34,7 @@ def test_concurrent_start_enqueues_exactly_once(setup):
         assert commands[0].workflow_id == f"opportunity-{mid}-1"
         assert [e.sequence for e in db.scalars(select(Event).order_by(Event.sequence))] == [1, 2]
     run = client.get(f"/v1/missions/{mid}/run", headers=headers).json()
-    assert len(run["steps"]) == 5
+    assert len(run["steps"]) == 6
     assert all(s["status"] == "pending" for s in run["steps"])
 
 

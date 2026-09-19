@@ -24,7 +24,7 @@ from .db import (
 from .schemas import CandidateProfile, JobPosting
 from .artifacts import prepare as prepare_artifacts
 
-STEP_NAMES = ("planning", "extracting", "matching", "verifying", "generating")
+STEP_NAMES = ("planning", "extracting", "researching", "matching", "verifying", "generating")
 TERMINAL = {"completed", "failed", "cancelled"}
 DATA = Path(os.getenv("OPERATOR_DATA_DIR", str(Path(__file__).resolve().parents[3] / "data/demo")))
 

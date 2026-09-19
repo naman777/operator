@@ -8,6 +8,7 @@ result() – assembles the final MissionResult from matched/verified outputs.
 
 from operator_api.schemas import (
     CandidateProfile,
+    CompanyResearch,
     EligibilityCheck,
     JobPosting,
     MissionResult,
@@ -102,7 +103,7 @@ def verify(job: JobPosting, matched: dict):
     return {"verified": True, "requirements_checked": len(matches), "source_ids": sorted(sources)}
 
 
-def result(mission_id, matched, verified):
+def result(mission_id, matched, verified, researched=None):
     return MissionResult(
         mission_id=mission_id,
         eligibility=matched["eligibility"],
@@ -112,5 +113,6 @@ def result(mission_id, matched, verified):
         score=matched["score"],
         matches=matched["matches"],
         source_ids=verified["source_ids"],
+        company_research=CompanyResearch.model_validate(researched) if researched else None,
         artifact_ids=[],
     ).model_dump(mode="json")

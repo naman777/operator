@@ -271,6 +271,11 @@ def parse(url, html):
     title = plain(posting.get("title"))
     organization = posting.get("hiringOrganization")
     company = plain(organization.get("name")) if isinstance(organization, dict) else ""
+    company_url = None
+    if isinstance(organization, dict):
+        candidate_url = organization.get("sameAs") or organization.get("url")
+        if isinstance(candidate_url, str) and urlsplit(candidate_url).scheme == "https":
+            company_url = candidate_url
     if not title or not company:
         raise ValueError("Job posting must specify a title and hiring organization")
     sid = "source-" + hashlib.sha256(html.encode()).hexdigest()[:20]
@@ -311,6 +316,7 @@ def parse(url, html):
         id=str(uuid4()),
         title=title,
         company=company,
+        company_url=company_url,
         url=url,
         location=location,
         requirements=list({r.id: r for r in requirements}.values()),

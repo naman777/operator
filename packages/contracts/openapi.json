@@ -2576,7 +2576,8 @@
             "type": "string",
             "enum": [
               "candidate",
-              "job"
+              "job",
+              "company"
             ],
             "title": "Kind"
           },
@@ -2931,6 +2932,40 @@
           "evidence"
         ],
         "title": "CandidateProfile"
+      },
+      "CompanyResearch": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "company": {
+            "type": "string",
+            "title": "Company"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchClaim"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "company"
+        ],
+        "title": "CompanyResearch"
       },
       "DocumentInput": {
         "properties": {
@@ -3652,6 +3687,20 @@
             "type": "string",
             "title": "Company"
           },
+          "company_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Url"
+          },
           "url": {
             "type": "string",
             "maxLength": 2083,
@@ -3802,6 +3851,16 @@
             },
             "type": "array",
             "title": "Source Ids"
+          },
+          "company_research": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyResearch"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "artifact_ids": {
             "items": {
@@ -4132,6 +4191,31 @@
           "explanation"
         ],
         "title": "RequirementMatch"
+      },
+      "ResearchClaim": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "source_id"
+        ],
+        "title": "ResearchClaim"
       },
       "RunView": {
         "properties": {

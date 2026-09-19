@@ -20,6 +20,7 @@ const ARTIFACT_LABELS: Record<string, string> = {
 const labels: Record<string, string> = {
   planning: "Plan analysis",
   extracting: "Load job snapshot",
+  researching: "Research official company sources",
   matching: "Match evidence",
   verifying: "Verify provenance",
   generating: "Store analysis and drafts",
@@ -141,6 +142,9 @@ export function RunInspector({
     Job | undefined;
   const matched = run?.steps.find((step) => step.name === "matching")
     ?.output as { profile?: Profile } | undefined;
+  const companyResearch = run?.result?.company_research;
+  const companyClaims = companyResearch?.claims ?? [];
+  const companySources = companyResearch?.sources ?? [];
   async function act(action: "start" | "cancel" | "retry") {
     setBusy(true);
     setError("");
@@ -305,6 +309,33 @@ export function RunInspector({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {companyClaims.length > 0 && (
+            <div className="match-list">
+              <h3>Official company research</h3>
+              {companyClaims.map((claim) => {
+                const source = companySources.find(
+                  (item) => item.id === claim.source_id,
+                );
+                return (
+                  <article
+                    className="evidence"
+                    key={`${claim.source_id}-${claim.text}`}
+                  >
+                    <p>{claim.text}</p>
+                    {source && (
+                      <small>
+                        <a href={source.url} target="_blank" rel="noreferrer">
+                          {source.title}
+                        </a>{" "}
+                        {source.retrieved_at &&
+                          ` / retrieved ${new Date(source.retrieved_at).toLocaleString()}`}
+                      </small>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           )}
           <div className="match-list">
