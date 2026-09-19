@@ -2,9 +2,9 @@
 
 A personal work execution agent, starting with evidence-backed opportunity analysis.
 
-**Current build: durable opportunity analysis with profile evidence and public job snapshots.** Open a guest workspace, correct your profile, ingest plain-text resume evidence, import a supported HTTPS JobPosting page, and inspect live analysis and four cited application drafts. Sample jobs remain available for demos.
+**Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve the pipeline action, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
 
-Matching and drafts use deterministic rules/templates. Resume ingestion appends to demo evidence; correct candidate details manually. Public extraction supports a single static JSON-LD JobPosting and preserves the raw snapshot. PDF/DOCX parsing, browser extraction, embeddings, semantic model matching, durable approval signals, and model evaluations remain pending. The approval inbox resolves stored rows but does not gate execution. See [PROGRESS.md](PROGRESS.md).
+Matching and drafts use deterministic rules/templates. Resume ingestion appends evidence and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single static JSON-LD JobPosting and preserves the raw snapshot. Browser rendering, vector embeddings, Agents SDK generation, MCP, and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
 
 ## Local setup
 

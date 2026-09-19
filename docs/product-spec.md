@@ -10,16 +10,16 @@
 - New Mission: URL, goal, fixed initial $1 budget cap, save action.
 - Run Inspector: mission status, pending step map, recorded events, budget and usage empty states.
 - Opportunity Detail: sample cards with requirements and source excerpts; application history is pending.
-- Approval Inbox: honest empty state until durable approvals are implemented.
+- Approval Inbox: durable Temporal wait with approve/reject controls and a 24-hour expiry.
 - Evaluation Lab: no fabricated results; awaiting evaluation execution.
 
 ## Contracts and state
 Pydantic models are authoritative. `pnpm contracts` exports JSON Schema v1 and OpenAPI, then generates TypeScript declarations. Clients may not supply workspace IDs or mission status.
 
-Implemented sample states: draft -> queued -> planning -> extracting -> matching -> verifying -> generating -> completed. Activities persist outputs and events; failure becomes failed after bounded retries, manual retry preserves completed checkpoints, and cancellation rejects late writes. Current generation creates cited draft artifacts and a local saved pipeline entry. Durable awaiting-approval and external integration actions remain pending.
+Implemented sample states: draft -> queued -> planning -> extracting -> matching -> verifying -> awaiting approval -> generating -> completed. Activities persist outputs and events; failure becomes failed after bounded retries, manual retry preserves completed checkpoints, and cancellation rejects late writes. Current generation creates cited, revisioned draft artifacts and a local saved pipeline entry after approval. External integration actions remain pending.
 
 ## Fit rubric v1 (deterministic fixture implementation)
 Required requirements weigh 2; preferred requirements weigh 1. Supported evidence contributes 1, partial contributes 0.5, missing contributes 0. Score = 100 * sum(weight * contribution) / sum(weights). A zero-requirement posting scores 0 with unknown eligibility, never 100%. Hard eligibility is evaluated separately with eligible/ineligible/unknown states; unknown constraints cannot silently pass. A positive match must reference stored candidate evidence. The current matcher uses exact skills in stored evidence. Structured semantic matching is pending; weighting and eligibility remain deterministic.
 
 ## Non-goals for this increment
-No public URL fetching, model calls, email sending, automatic applications, or real account authentication. Temporal workflow durability is tested with worker restarts. Public deployment requires rate limits, expiring sessions, proper account auth, and the remaining hardening milestones.
+Static public JSON-LD job pages are fetched through guarded HTTPS transport. There are no model calls, email sends, automatic applications, or real account sessions. Temporal workflow durability is tested with worker restarts. Public deployment requires rate limits, account auth, browser-extraction hardening, and the remaining security milestones.

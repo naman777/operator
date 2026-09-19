@@ -1,0 +1,30 @@
+{
+  "version": "opportunity-v1",
+  "profile": "candidate.json",
+  "cases": [
+    {
+      "id": "exact-backend-fit",
+      "job": "job-1.json",
+      "expected": {
+        "score": 100.0,
+        "requirements": {"req-1-1": "supported", "req-1-2": "supported"}
+      }
+    },
+    {
+      "id": "exact-frontend-fit",
+      "job": "job-2.json",
+      "expected": {
+        "score": 100.0,
+        "requirements": {"req-2-1": "supported", "req-2-2": "supported"}
+      }
+    },
+    {
+      "id": "documented-gap",
+      "job": "job-3.json",
+      "expected": {
+        "score": 50.0,
+        "requirements": {"req-3-1": "supported", "req-3-2": "missing"}
+      }
+    }
+  ]
+}

@@ -1656,6 +1656,229 @@
         }
       }
     },
+    "/v1/evals/runs": {
+      "post": {
+        "summary": "Run Evaluation",
+        "operationId": "run_evaluation_v1_evals_runs_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Evaluations",
+        "operationId": "list_evaluations_v1_evals_runs_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvalRunView"
+                  },
+                  "title": "Response List Evaluations V1 Evals Runs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals/runs/{eval_run_id}": {
+      "get": {
+        "summary": "Get Evaluation",
+        "operationId": "get_evaluation_v1_evals_runs__eval_run_id__get",
+        "parameters": [
+          {
+            "name": "eval_run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/evals/compare": {
+      "get": {
+        "summary": "Compare Evaluations",
+        "operationId": "compare_evaluations_v1_evals_compare_get",
+        "parameters": [
+          {
+            "name": "baseline",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Baseline"
+            }
+          },
+          {
+            "name": "candidate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Candidate"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalComparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/opportunities/imports": {
       "get": {
         "summary": "Imports",
@@ -2523,6 +2746,231 @@
         "additionalProperties": false,
         "type": "object",
         "title": "EligibilityRequirements"
+      },
+      "EvalCaseResult": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "expected_score": {
+            "type": "number",
+            "title": "Expected Score"
+          },
+          "actual_score": {
+            "type": "number",
+            "title": "Actual Score"
+          },
+          "requirement_accuracy": {
+            "type": "number",
+            "title": "Requirement Accuracy"
+          },
+          "citation_coverage": {
+            "type": "number",
+            "title": "Citation Coverage"
+          },
+          "unsupported_positive_count": {
+            "type": "integer",
+            "title": "Unsupported Positive Count"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id",
+          "job_title",
+          "passed",
+          "expected_score",
+          "actual_score",
+          "requirement_accuracy",
+          "citation_coverage",
+          "unsupported_positive_count",
+          "latency_ms"
+        ],
+        "title": "EvalCaseResult"
+      },
+      "EvalComparison": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "baseline_id": {
+            "type": "string",
+            "title": "Baseline Id"
+          },
+          "candidate_id": {
+            "type": "string",
+            "title": "Candidate Id"
+          },
+          "deltas": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Deltas"
+          },
+          "regression": {
+            "type": "boolean",
+            "title": "Regression"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "baseline_id",
+          "candidate_id",
+          "deltas",
+          "regression"
+        ],
+        "title": "EvalComparison"
+      },
+      "EvalMetrics": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "case_count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Case Count"
+          },
+          "requirement_accuracy": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Requirement Accuracy"
+          },
+          "score_mae": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score Mae"
+          },
+          "citation_coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Citation Coverage"
+          },
+          "unsupported_positive_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Unsupported Positive Rate"
+          },
+          "mean_latency_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Mean Latency Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_count",
+          "requirement_accuracy",
+          "score_mae",
+          "citation_coverage",
+          "unsupported_positive_rate",
+          "mean_latency_ms"
+        ],
+        "title": "EvalMetrics"
+      },
+      "EvalRunRequest": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "dataset_version": {
+            "type": "string",
+            "const": "opportunity-v1",
+            "title": "Dataset Version",
+            "default": "opportunity-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvalRunRequest"
+      },
+      "EvalRunView": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "evaluator_version": {
+            "type": "string",
+            "title": "Evaluator Version"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/EvalMetrics"
+          },
+          "case_results": {
+            "items": {
+              "$ref": "#/components/schemas/EvalCaseResult"
+            },
+            "type": "array",
+            "title": "Case Results"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "dataset_version",
+          "evaluator_version",
+          "metrics",
+          "case_results",
+          "created_at"
+        ],
+        "title": "EvalRunView"
       },
       "EventView": {
         "properties": {

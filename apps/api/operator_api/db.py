@@ -201,6 +201,17 @@ class ImportedJob(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class EvalRun(Base):
+    __tablename__ = "eval_runs"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    dataset_version: Mapped[str] = mapped_column(String)
+    evaluator_version: Mapped[str] = mapped_column(String)
+    metrics: Mapped[dict] = mapped_column(JSON)
+    case_results: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 def database(url=None):
     url = url or os.getenv("DATABASE_URL", "sqlite:///./operator.db")
     engine = create_engine(url, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})

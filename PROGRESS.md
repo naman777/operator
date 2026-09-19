@@ -242,3 +242,12 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Rewrote `analysis.py` `match()`: exact skill-list exact match → `supported` (fast path, fixture-compatible); Jaccard ≥ 0.40 → `supported`; Jaccard ≥ 0.15 → `partial` (40% weight contribution); below → `missing`. Fit score reflects both tiers.
 - Updated `verify()`: accepts `partial` status alongside `supported`; restores `"Unsupported positive match"` error string for backwards compatibility with existing security tests.
 - Validation: 77 tests passed (13 new: 4 tokenizer/Jaccard units, 5 score_requirement units, 3 match+verify integration, 1 fixture-compat). Ruff clean. No new dependencies.
+
+## Phase 6 continuation: measured Evaluation Lab
+- Added the versioned `opportunity-v1` dataset with three exact-fit and documented-gap cases using the synthetic candidate and existing job fixtures.
+- Added deterministic graders for requirement accuracy, score mean absolute error, citation coverage, unsupported positive rate, and matcher latency. Verification reuses the production provenance and reproducibility checks.
+- Persisted workspace-scoped evaluation runs and case results through migration 009.
+- Added run, list, detail, and baseline/candidate comparison APIs. Comparisons flag quality regressions while reporting latency separately.
+- Replaced the Evaluation Lab placeholder with live run controls, metric cards, history, and case-level pass/fail results.
+- Updated README, product specification, and demo script to remove stale claims about completed ingestion and approval work.
+- Validation: 80 Python tests passed, Ruff passed, four frontend tests passed, TypeScript and Prettier checks passed, and the Next.js production build completed successfully.

@@ -295,3 +295,45 @@ class OpportunityImport(Contract):
 class ImportReceipt(Contract):
     import_id: str
     posting: JobPosting
+
+
+class EvalRunRequest(Contract):
+    dataset_version: Literal["opportunity-v1"] = "opportunity-v1"
+
+
+class EvalMetrics(Contract):
+    case_count: int = Field(ge=1)
+    requirement_accuracy: float = Field(ge=0, le=1)
+    score_mae: float = Field(ge=0, le=100)
+    citation_coverage: float = Field(ge=0, le=1)
+    unsupported_positive_rate: float = Field(ge=0, le=1)
+    mean_latency_ms: float = Field(ge=0)
+
+
+class EvalCaseResult(Contract):
+    case_id: str
+    job_title: str
+    passed: bool
+    expected_score: float
+    actual_score: float
+    requirement_accuracy: float
+    citation_coverage: float
+    unsupported_positive_count: int
+    latency_ms: float
+
+
+class EvalRunView(Contract):
+    id: str
+    workspace_id: str
+    dataset_version: str
+    evaluator_version: str
+    metrics: EvalMetrics
+    case_results: list[EvalCaseResult]
+    created_at: datetime
+
+
+class EvalComparison(Contract):
+    baseline_id: str
+    candidate_id: str
+    deltas: dict[str, float]
+    regression: bool

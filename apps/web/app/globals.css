@@ -255,6 +255,33 @@ h3 {
   font-size: 11px;
   color: var(--muted);
 }
+
+.page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.page-heading h1 {
+  margin: 4px 0 8px;
+}
+.page-heading .muted {
+  max-width: 680px;
+}
+.eval-runs {
+  display: grid;
+  gap: 16px;
+}
+.eval-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+}
+.eval-cases {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
 .two-col {
   display: grid;
   grid-template-columns: 1.65fr 1fr;

@@ -475,6 +475,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/evals/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Evaluations */
+        get: operations["list_evaluations_v1_evals_runs_get"];
+        put?: never;
+        /** Run Evaluation */
+        post: operations["run_evaluation_v1_evals_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/evals/runs/{eval_run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Evaluation */
+        get: operations["get_evaluation_v1_evals_runs__eval_run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/evals/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Compare Evaluations */
+        get: operations["compare_evaluations_v1_evals_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/opportunities/imports": {
         parameters: {
             query?: never;
@@ -813,6 +865,113 @@ export interface components {
              * @default false
              */
             requirements_complete: boolean;
+        };
+        /** EvalCaseResult */
+        EvalCaseResult: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Case Id */
+            case_id: string;
+            /** Job Title */
+            job_title: string;
+            /** Passed */
+            passed: boolean;
+            /** Expected Score */
+            expected_score: number;
+            /** Actual Score */
+            actual_score: number;
+            /** Requirement Accuracy */
+            requirement_accuracy: number;
+            /** Citation Coverage */
+            citation_coverage: number;
+            /** Unsupported Positive Count */
+            unsupported_positive_count: number;
+            /** Latency Ms */
+            latency_ms: number;
+        };
+        /** EvalComparison */
+        EvalComparison: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Baseline Id */
+            baseline_id: string;
+            /** Candidate Id */
+            candidate_id: string;
+            /** Deltas */
+            deltas: {
+                [key: string]: number;
+            };
+            /** Regression */
+            regression: boolean;
+        };
+        /** EvalMetrics */
+        EvalMetrics: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Case Count */
+            case_count: number;
+            /** Requirement Accuracy */
+            requirement_accuracy: number;
+            /** Score Mae */
+            score_mae: number;
+            /** Citation Coverage */
+            citation_coverage: number;
+            /** Unsupported Positive Rate */
+            unsupported_positive_rate: number;
+            /** Mean Latency Ms */
+            mean_latency_ms: number;
+        };
+        /** EvalRunRequest */
+        EvalRunRequest: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Dataset Version
+             * @default opportunity-v1
+             * @constant
+             */
+            dataset_version: "opportunity-v1";
+        };
+        /** EvalRunView */
+        EvalRunView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Dataset Version */
+            dataset_version: string;
+            /** Evaluator Version */
+            evaluator_version: string;
+            metrics: components["schemas"]["EvalMetrics"];
+            /** Case Results */
+            case_results: components["schemas"]["EvalCaseResult"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** EventView */
         EventView: {
@@ -2217,6 +2376,139 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_evaluations_v1_evals_runs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_evaluation_v1_evals_runs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evaluation_v1_evals_runs__eval_run_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                eval_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compare_evaluations_v1_evals_compare_get: {
+        parameters: {
+            query: {
+                baseline: string;
+                candidate: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalComparison"];
                 };
             };
             /** @description Validation Error */

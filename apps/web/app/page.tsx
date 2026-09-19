@@ -10,6 +10,7 @@ type Job = components["schemas"]["JobPosting"];
 type Profile = components["schemas"]["CandidateProfile"];
 type Application = components["schemas"]["ApplicationView"];
 type Approval = components["schemas"]["ApprovalView"];
+type EvalRun = components["schemas"]["EvalRunView"];
 type Screen =
   | "Mission Control"
   | "Opportunities"
@@ -53,6 +54,8 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
+  const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
+  const [evalBusy, setEvalBusy] = useState(false);
   const [selected, setSelected] = useState<Mission | null>(null);
   const [url, setUrl] = useState("");
   const [goal, setGoal] = useState(
@@ -89,18 +92,20 @@ export default function Home() {
     return response.json();
   }
   async function load(session: string) {
-    const [m, j, p, apps, apv] = await Promise.all([
+    const [m, j, p, apps, apv, evals] = await Promise.all([
       api<Mission[]>("/v1/missions", session),
       api<Job[]>("/v1/demo/jobs", session),
       api<Profile>("/v1/profile", session),
       api<Application[]>("/v1/applications", session),
       api<Approval[]>("/v1/approvals", session),
+      api<EvalRun[]>("/v1/evals/runs", session),
     ]);
     setMissions(m);
     setJobs(j);
     setProfile(p);
     setApplications(apps);
     setApprovals(apv);
+    setEvalRuns(evals);
   }
   useEffect(() => {
     const saved = localStorage.getItem("operator-session");
@@ -218,6 +223,21 @@ export default function Home() {
       setApprovals(updated);
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+  async function runEvaluation() {
+    setEvalBusy(true);
+    setError("");
+    try {
+      const run = await api<EvalRun>("/v1/evals/runs", token, {
+        method: "POST",
+        body: JSON.stringify({ dataset_version: "opportunity-v1" }),
+      });
+      setEvalRuns((current) => [run, ...current]);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setEvalBusy(false);
     }
   }
   const pendingApprovals = approvals.filter(
@@ -658,15 +678,96 @@ export default function Home() {
               )}
             </>
           ) : (
-            <section className="panel empty">
-              <span>⌁</span>
-              <h2>Evaluation results will live here</h2>
-              <p>
-                No evaluations have run yet. Quality, cost, and latency metrics
-                will be shown only after measurement.
-              </p>
-              <span className="tag">PLANNED MILESTONE</span>
-            </section>
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">QUALITY REGRESSION</p>
+                  <h1>Evaluation Lab</h1>
+                  <p className="muted">
+                    Versioned cases measure matching accuracy, score drift,
+                    evidence coverage, and unsupported positive matches.
+                  </p>
+                </div>
+                <button
+                  className="primary"
+                  onClick={runEvaluation}
+                  disabled={evalBusy}
+                >
+                  {evalBusy ? "Running…" : "Run opportunity-v1"}
+                </button>
+              </div>
+              {evalRuns.length === 0 ? (
+                <section className="panel empty">
+                  <h2>No measured runs yet</h2>
+                  <p>
+                    Run the three-case baseline to record reproducible quality
+                    and latency metrics for the current matcher.
+                  </p>
+                  <span className="tag">DATASET opportunity-v1</span>
+                </section>
+              ) : (
+                <div className="eval-runs">
+                  {evalRuns.map((run, index) => (
+                    <section className="panel" key={run.id}>
+                      <div className="panel-title">
+                        <div>
+                          <span className="tag">{run.dataset_version}</span>{" "}
+                          <strong style={{ marginLeft: 10 }}>
+                            {index === 0 ? "Latest run" : "Previous run"}
+                          </strong>
+                        </div>
+                        <span className="muted">
+                          {new Date(run.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="stats eval-stats">
+                        <div>
+                          <small>REQUIREMENT ACCURACY</small>
+                          <strong>
+                            {(run.metrics.requirement_accuracy * 100).toFixed(
+                              0,
+                            )}
+                            %
+                          </strong>
+                        </div>
+                        <div>
+                          <small>SCORE MAE</small>
+                          <strong>{run.metrics.score_mae.toFixed(1)}</strong>
+                        </div>
+                        <div>
+                          <small>CITATION COVERAGE</small>
+                          <strong>
+                            {(run.metrics.citation_coverage * 100).toFixed(0)}%
+                          </strong>
+                        </div>
+                        <div>
+                          <small>MEAN LATENCY</small>
+                          <strong>
+                            {run.metrics.mean_latency_ms.toFixed(2)} ms
+                          </strong>
+                        </div>
+                      </div>
+                      <details style={{ marginTop: 16 }}>
+                        <summary>{run.metrics.case_count} case results</summary>
+                        <div className="eval-cases">
+                          {run.case_results.map((item) => (
+                            <p key={item.case_id} className="muted">
+                              <span
+                                className={`tag ${item.passed ? "status-completed" : "status-failed"}`}
+                              >
+                                {item.passed ? "PASS" : "FAIL"}
+                              </span>{" "}
+                              {item.job_title}: score {item.actual_score} /
+                              expected {item.expected_score}
+                            </p>
+                          ))}
+                        </div>
+                      </details>
+                    </section>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           <footer>
             OPERATOR{" "}

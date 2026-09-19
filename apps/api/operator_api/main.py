@@ -29,6 +29,7 @@ from .db import (
     Workspace,
     StoredProfile,
     ImportedJob,
+    EvalRun,
     database,
     utcnow,
 )
@@ -55,9 +56,12 @@ from .schemas import (
     MissionView,
     StageUpdate,
     WorkspaceView,
+    EvalRunRequest,
+    EvalRunView,
+    EvalComparison,
 )
 
-from . import runtime, streaming, profiles, extraction, document_parser
+from . import runtime, streaming, profiles, extraction, document_parser, evaluations
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -593,6 +597,59 @@ def create_app(database_url=None):
         db.add(row)
         db.commit()
         return {"import_id": row.id, "posting": posting}
+
+    # ---------------------------------------------------------------------------
+    # Evaluation lab
+    # ---------------------------------------------------------------------------
+
+    @app.post("/v1/evals/runs", response_model=EvalRunView, status_code=201)
+    def run_evaluation(body: EvalRunRequest, db: DB, ws: WS):
+        try:
+            metrics, case_results = evaluations.run(DATA.parents[1], body.dataset_version)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        row = EvalRun(
+            id=str(uuid4()),
+            workspace_id=ws.id,
+            dataset_version=body.dataset_version,
+            evaluator_version=evaluations.EVALUATOR_VERSION,
+            metrics=metrics,
+            case_results=case_results,
+        )
+        db.add(row)
+        db.commit()
+        return row
+
+    @app.get("/v1/evals/runs", response_model=list[EvalRunView])
+    def list_evaluations(db: DB, ws: WS):
+        return db.scalars(
+            select(EvalRun)
+            .where(EvalRun.workspace_id == ws.id)
+            .order_by(EvalRun.created_at.desc())
+        ).all()
+
+    @app.get("/v1/evals/runs/{eval_run_id}", response_model=EvalRunView)
+    def get_evaluation(eval_run_id: str, db: DB, ws: WS):
+        row = db.scalar(
+            select(EvalRun).where(EvalRun.id == eval_run_id, EvalRun.workspace_id == ws.id)
+        )
+        if not row:
+            raise HTTPException(404, "Evaluation run not found")
+        return row
+
+    @app.get("/v1/evals/compare", response_model=EvalComparison)
+    def compare_evaluations(baseline: str, candidate: str, db: DB, ws: WS):
+        rows = db.scalars(
+            select(EvalRun).where(
+                EvalRun.workspace_id == ws.id,
+                EvalRun.id.in_([baseline, candidate]),
+            )
+        ).all()
+        by_id = {row.id: row for row in rows}
+        if baseline not in by_id or candidate not in by_id:
+            raise HTTPException(404, "Evaluation run not found")
+        result = evaluations.compare(by_id[baseline].metrics, by_id[candidate].metrics)
+        return {"baseline_id": baseline, "candidate_id": candidate, **result}
 
     @app.get("/v1/opportunities/imports", response_model=list[ImportReceipt])
     def imports(db: DB, ws: WS):

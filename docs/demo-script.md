@@ -9,4 +9,4 @@
 7. Open each of the four draft artifacts and expand its source citations. Check that candidate statements match stored project excerpts.
 8. Open Application Pipeline to see the saved role; reload to confirm persistence.
 
-This demonstrates real Temporal execution over synthetic fixtures. It does not fetch a public job page, call a model, send an application, or wait on a durable approval gate. Evaluation Lab has no measured model results yet.
+This demonstrates real Temporal execution over synthetic fixtures or a guarded static public JSON-LD snapshot. It waits on a durable approval gate, preserves artifact revisions, and can run the measured deterministic baseline in Evaluation Lab. It does not call a model, send an application, or perform external account actions.
