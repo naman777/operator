@@ -160,6 +160,19 @@ class StepOutput(Base):
     error: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class ModelCall(Base):
+    __tablename__ = "model_calls"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), index=True)
+    step: Mapped[str] = mapped_column(String)
+    model: Mapped[str] = mapped_column(String)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0)
+    status: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class DispatchCommand(Base):
     __tablename__ = "dispatch_commands"
     id: Mapped[str] = mapped_column(String, primary_key=True)

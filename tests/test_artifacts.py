@@ -5,7 +5,7 @@ from sqlalchemy import select
 from temporalio.testing import ActivityEnvironment
 from operator_api.main import create_app
 from operator_api.runtime import begin_step, finish_step
-from operator_api.db import Application, Artifact, MissionRun, Opportunity, database
+from operator_api.db import Application, Artifact, MissionRun, ModelCall, Opportunity, database
 from operator_worker.activities import Activities
 
 
@@ -105,6 +105,28 @@ def test_validated_model_drafts_keep_immutable_citations_and_review_status(setup
     events = client.get(f"/v1/missions/{mid}/events", headers=headers).json()
     completed = next(item for item in events if item["type"] == "mission.completed")
     assert completed["payload"]["model_calls"] == 1
+
+
+def test_model_call_audit_is_workspace_scoped(setup):
+    client, headers, mid, sessions = setup
+    with sessions.begin() as db:
+        db.add(
+            ModelCall(
+                id="model-call-test",
+                mission_id=mid,
+                step="matching",
+                model="test-model",
+                input_tokens=100,
+                output_tokens=20,
+                cost_usd=0.001,
+                status="completed",
+            )
+        )
+    response = client.get(f"/v1/missions/{mid}/model-calls", headers=headers)
+    assert response.status_code == 200
+    assert response.json()[0]["cost_usd"] == 0.001
+    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+    assert client.get(f"/v1/missions/{mid}/model-calls", headers=other).status_code == 404
 
 
 def test_completion_acknowledgement_replay_does_not_duplicate_artifacts(setup):

@@ -1,6 +1,7 @@
 from operator_api.runtime import sample_job, sample_profile
 from operator_worker.analysis import match, verify
 from operator_worker import model_runtime
+from types import SimpleNamespace
 
 
 def enable(monkeypatch):
@@ -18,6 +19,31 @@ def test_model_path_is_disabled_without_explicit_configuration(monkeypatch):
 
     assert model_runtime.enrich_matches(job, profile, deterministic, 1.0) is deterministic
     assert model_runtime.generate_drafts(job, profile, deterministic, 1.0) is None
+
+
+def test_sdk_usage_is_captured_and_costed(monkeypatch):
+    enable(monkeypatch)
+    monkeypatch.setenv("OPERATOR_MODEL_INPUT_USD_PER_MILLION", "2")
+    monkeypatch.setenv("OPERATOR_MODEL_OUTPUT_USD_PER_MILLION", "8")
+    output = model_runtime.SemanticMatchOutput(matches=[])
+    result = SimpleNamespace(
+        final_output=output,
+        context_wrapper=SimpleNamespace(usage=SimpleNamespace(input_tokens=1000, output_tokens=250)),
+    )
+    monkeypatch.setattr("agents.Runner.run_sync", lambda *_args, **_kwargs: result)
+
+    with model_runtime.capture_usage() as records:
+        actual = model_runtime._invoke("test", "test", "{}", model_runtime.SemanticMatchOutput)
+    assert actual == output
+    assert records == [
+        {
+            "model": "test-model",
+            "input_tokens": 1000,
+            "output_tokens": 250,
+            "cost_usd": 0.004,
+            "status": "completed",
+        }
+    ]
 
 
 def test_semantic_explanations_cannot_change_verified_evidence(monkeypatch):

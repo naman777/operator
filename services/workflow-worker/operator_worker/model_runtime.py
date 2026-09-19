@@ -8,6 +8,8 @@ import json
 import hashlib
 import os
 import re
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date
 from typing import Literal
 
@@ -18,6 +20,26 @@ from operator_api.schemas import CandidateProfile, EligibilityRequirements, JobP
 
 MAX_PROMPT_CHARS = 40_000
 MAX_OUTPUT_CHARS = 12_000
+_usage_sink: ContextVar[list | None] = ContextVar("operator_model_usage", default=None)
+
+
+@contextmanager
+def capture_usage():
+    records = []
+    token = _usage_sink.set(records)
+    try:
+        yield records
+    finally:
+        _usage_sink.reset(token)
+
+
+def configured_cost(input_tokens: int, output_tokens: int) -> float:
+    try:
+        input_rate = float(os.getenv("OPERATOR_MODEL_INPUT_USD_PER_MILLION", "0"))
+        output_rate = float(os.getenv("OPERATOR_MODEL_OUTPUT_USD_PER_MILLION", "0"))
+    except ValueError:
+        return 0.0
+    return round((input_tokens * input_rate + output_tokens * output_rate) / 1_000_000, 8)
 
 
 class _StrictModel(BaseModel):
@@ -81,7 +103,7 @@ def enabled(budget_usd: float) -> bool:
 
 def _invoke(name: str, instructions: str, prompt: str, output_type):
     """Run exactly one tool-free Agents SDK turn (kept isolated for tests)."""
-    from agents import Agent, Runner
+    from agents import Agent, ModelSettings, Runner
 
     if len(prompt) > MAX_PROMPT_CHARS:
         raise ValueError("Model prompt exceeds the configured character limit")
@@ -90,9 +112,38 @@ def _invoke(name: str, instructions: str, prompt: str, output_type):
         instructions=instructions,
         model=os.environ["OPERATOR_MODEL"],
         output_type=output_type,
+        model_settings=ModelSettings(
+            max_tokens=int(os.getenv("OPERATOR_MODEL_MAX_OUTPUT_TOKENS", "1200")),
+            include_usage=True,
+            timeout=float(os.getenv("OPERATOR_MODEL_TIMEOUT_SECONDS", "30")),
+        ),
     )
-    result = Runner.run_sync(agent, prompt, max_turns=1)
-    return output_type.model_validate(result.final_output)
+    sink = _usage_sink.get()
+    try:
+        result = Runner.run_sync(agent, prompt, max_turns=1)
+        usage = result.context_wrapper.usage
+        record = {
+            "model": os.environ["OPERATOR_MODEL"],
+            "input_tokens": int(usage.input_tokens),
+            "output_tokens": int(usage.output_tokens),
+            "cost_usd": configured_cost(int(usage.input_tokens), int(usage.output_tokens)),
+            "status": "completed",
+        }
+        if sink is not None:
+            sink.append(record)
+        return output_type.model_validate(result.final_output)
+    except Exception:
+        if sink is not None:
+            sink.append(
+                {
+                    "model": os.getenv("OPERATOR_MODEL", "unknown"),
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "cost_usd": 0.0,
+                    "status": "failed",
+                }
+            )
+        raise
 
 
 def _exact_excerpt(value: str, source: str) -> str | None:

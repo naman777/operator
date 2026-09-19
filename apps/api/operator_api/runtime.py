@@ -18,6 +18,7 @@ from .db import (
     StepOutput,
     Workspace,
     ImportedJob,
+    ModelCall,
     utcnow,
 )
 from .schemas import CandidateProfile, JobPosting
@@ -335,6 +336,11 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
             },
         )
         if name == "generating":
+            usage_count, usage_cost = db.execute(
+                select(func.count(ModelCall.id), func.coalesce(func.sum(ModelCall.cost_usd), 0)).where(
+                    ModelCall.mission_id == mission_id
+                )
+            ).one()
             mission.status = "completed"
             record_event(
                 db,
@@ -343,8 +349,8 @@ def finish_step(sessions, mission_id, run_number, name, payload, latency_ms):
                 {
                     "score": payload["score"],
                     "execution_mode": "synthetic-fixture",
-                    "model_calls": model_calls,
-                    "cost_usd": 0,
+                    "model_calls": max(model_calls, int(usage_count)),
+                    "cost_usd": round(float(usage_cost), 8),
                     "artifact_ids": payload["artifact_ids"],
                     "artifact_status": "draft",
                 },

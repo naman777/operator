@@ -361,3 +361,15 @@ class EvalComparison(Contract):
     candidate_id: str
     deltas: dict[str, float]
     regression: bool
+
+
+class ModelCallView(Contract):
+    id: str
+    mission_id: str
+    step: str
+    model: str
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+    cost_usd: float = Field(ge=0)
+    status: Literal["completed", "failed"]
+    created_at: datetime

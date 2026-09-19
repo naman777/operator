@@ -16,6 +16,13 @@ Updated: 2026-09-19
 - Untrusted page text is isolated as data, model tools remain disabled, and provider/schema failures preserve the original JSON-LD posting. Extraction attempts are included in the mission's durable model-call count.
 - Validation: 93 Python tests passed (one opt-in Temporal test skipped), Ruff passed, four frontend tests passed, TypeScript checks passed, and the installed Agents SDK accepted the job-parser output schema. Live provider validation remains pending because no API key is configured.
 
+### Checkpoint: durable model usage and budget accounting
+- Added migration 012 and workspace-scoped model-call audit records with stage, model, status, input/output tokens, configured cost, and timestamp.
+- Agents SDK calls now request usage, cap output tokens, enforce a timeout, and calculate cost from explicitly configured per-million-token rates. Later stages use the mission budget minus recorded cost and retain the existing per-call reserve.
+- Added `GET /v1/missions/{mission_id}/model-calls`; completion events now report persisted call count and cost instead of placeholders. Generated OpenAPI, JSON Schemas, and TypeScript declarations include the audit contract.
+- Validation: 95 Python tests passed (one opt-in Temporal test skipped), migration repeatability and workspace isolation passed, Ruff and formatting passed, four frontend tests and TypeScript checks passed, and the production web build passed. Live provider validation remains pending because no API key is configured.
+- Backed up the ignored local SQLite database and applied migrations through 012; the model-call table is available to the current development stack.
+
 ## Current milestone
 Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 

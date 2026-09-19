@@ -7,9 +7,10 @@ from temporalio import activity
 from temporalio.exceptions import ApplicationError
 from operator_api import runtime, profiles
 from operator_api.schemas import JobPosting, CandidateProfile
-from operator_api.db import Approval, Mission, utcnow
+from operator_api.db import Approval, Mission, ModelCall, utcnow
+from sqlalchemy import func, select
 from .analysis import match, result, verify
-from .model_runtime import enabled as model_enabled
+from .model_runtime import capture_usage, enabled as model_enabled
 from .model_runtime import enrich_job, enrich_matches, generate_drafts
 
 
@@ -23,6 +24,19 @@ def job_from_step(payload):
 class Activities:
     def __init__(self, sessions):
         self.sessions = sessions
+
+    def remaining_budget(self, mission_id):
+        with self.sessions() as db:
+            mission = db.get(Mission, mission_id)
+            spent = db.scalar(select(func.coalesce(func.sum(ModelCall.cost_usd), 0)).where(ModelCall.mission_id == mission_id))
+            return max(0.0, mission.budget_usd - float(spent or 0))
+
+    def record_usage(self, mission_id, step, records):
+        if not records:
+            return
+        with self.sessions.begin() as db:
+            for record in records:
+                db.add(ModelCall(id=str(uuid4()), mission_id=mission_id, step=step, **record))
 
     @activity.defn
     def execute_step(self, request: dict) -> dict:
@@ -51,19 +65,21 @@ class Activities:
                     "model_calls": 0,
                 }
             elif name == "extracting":
-                with self.sessions() as db:
-                    budget_usd = db.get(Mission, mission_id).budget_usd
-                posting, model_calls, fallback = enrich_job(
-                    JobPosting.model_validate(inputs["planning"]["job_posting"]), budget_usd
-                )
+                budget_usd = self.remaining_budget(mission_id)
+                with capture_usage() as usage:
+                    posting, model_calls, fallback = enrich_job(
+                        JobPosting.model_validate(inputs["planning"]["job_posting"]), budget_usd
+                    )
+                self.record_usage(mission_id, name, usage)
                 payload = posting.model_dump(mode="json")
                 payload.update({"_model_calls": model_calls, "_model_fallback": fallback})
             elif name == "matching":
                 job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
-                with self.sessions() as db:
-                    budget_usd = db.get(Mission, mission_id).budget_usd
-                payload = enrich_matches(job, profile, match(job, profile), budget_usd)
+                budget_usd = self.remaining_budget(mission_id)
+                with capture_usage() as usage:
+                    payload = enrich_matches(job, profile, match(job, profile), budget_usd)
+                self.record_usage(mission_id, name, usage)
                 payload["model_calls"] = payload.get("model_calls", 0) + inputs["extracting"].get(
                     "_model_calls", 0
                 )
@@ -73,9 +89,10 @@ class Activities:
                 payload = result(mission_id, inputs["matching"], inputs["verifying"])
                 job = job_from_step(inputs["extracting"])
                 profile = CandidateProfile.model_validate(inputs["planning"]["candidate_profile"])
-                with self.sessions() as db:
-                    budget_usd = db.get(Mission, mission_id).budget_usd
-                drafts = generate_drafts(job, profile, inputs["matching"], budget_usd)
+                budget_usd = self.remaining_budget(mission_id)
+                with capture_usage() as usage:
+                    drafts = generate_drafts(job, profile, inputs["matching"], budget_usd)
+                self.record_usage(mission_id, name, usage)
                 payload["_model_calls"] = inputs["matching"].get("model_calls", 0) + int(
                     model_enabled(budget_usd)
                 )

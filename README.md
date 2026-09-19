@@ -38,7 +38,7 @@ pnpm dev
 
 Open http://127.0.0.1:3000. API docs: http://127.0.0.1:8000/docs. Temporal UI: http://127.0.0.1:8233.
 
-The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services.
+The Temporal SDK downloads its official dev-server executable on first use. Its history is stored under ignored `.local/temporal`; product data is stored in ignored `operator.db`. Set `DATABASE_URL` consistently for API, migrations, and worker to use another database. Set `TEMPORAL_ADDRESS` for another Temporal server. Existing checkouts must run migrations before restarting services. Migration 012 adds the model-call audit table.
 
 ### MCP server
 
@@ -65,7 +65,9 @@ The token is process configuration and is never included in a tool argument or m
 
 ### Optional model enrichment
 
-The worker makes no model calls unless `OPERATOR_MODEL_ENABLED=1`, `OPENAI_API_KEY`, and `OPERATOR_MODEL` are all set. It also requires the mission budget to cover `OPERATOR_MODEL_BUDGET_RESERVE_USD` (default `$0.10`). The adapter runs one tool-free turn per stage, caps prompt/output size, validates structured output, and falls back locally on any model or validation error. Requirement parsing accepts only exact excerpts from the retrieved source and verifies numeric and authorization constraints against those excerpts. Matching preserves deterministic scores and evidence mappings. See `.env.example` for the variables.
+The worker makes no model calls unless `OPERATOR_MODEL_ENABLED=1`, `OPENAI_API_KEY`, and `OPERATOR_MODEL` are all set. It also requires the mission's remaining budget to cover `OPERATOR_MODEL_BUDGET_RESERVE_USD` (default `$0.10`). The adapter runs one tool-free turn per stage, limits output tokens and duration, validates structured output, and falls back locally on any model or validation error. Requirement parsing accepts only exact excerpts from the retrieved source and verifies numeric and authorization constraints against those excerpts. Matching preserves deterministic scores and evidence mappings.
+
+Set the input/output rates for the selected model in `.env` to calculate cost from the SDK's reported token usage. Each attempt is stored in `model_calls`; `GET /v1/missions/{mission_id}/model-calls` exposes the workspace-scoped audit trail. Later stages use the mission budget minus recorded configured cost. See `.env.example` for all model variables.
 
 ### Docker
 

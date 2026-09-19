@@ -471,6 +471,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/missions/{mission_id}/model-calls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Model Calls */
+        get: operations["model_calls_v1_missions__mission_id__model_calls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/missions/{mission_id}/artifacts": {
         parameters: {
             query?: never;
@@ -1336,6 +1353,39 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
             status: components["schemas"]["MissionStatus"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ModelCallView */
+        ModelCallView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** Mission Id */
+            mission_id: string;
+            /** Step */
+            step: string;
+            /** Model */
+            model: string;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Output Tokens */
+            output_tokens: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "failed";
             /**
              * Created At
              * Format: date-time
@@ -2494,6 +2544,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExternalActionView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    model_calls_v1_missions__mission_id__model_calls_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                mission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelCallView"][];
                 };
             };
             /** @description Validation Error */

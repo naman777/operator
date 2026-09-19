@@ -32,6 +32,7 @@ from .db import (
     ImportedJob,
     EvalRun,
     ExternalAction,
+    ModelCall,
     database,
     utcnow,
 )
@@ -64,6 +65,7 @@ from .schemas import (
     ActionProposal,
     ApprovalProposalUpdate,
     ExternalActionView,
+    ModelCallView,
 )
 
 from . import (
@@ -620,6 +622,13 @@ def create_app(database_url=None):
             select(ExternalAction)
             .where(ExternalAction.workspace_id == ws.id)
             .order_by(ExternalAction.created_at.desc())
+        ).all()
+
+    @app.get("/v1/missions/{mission_id}/model-calls", response_model=list[ModelCallView])
+    def model_calls(mission_id: str, db: DB, ws: WS):
+        get_owned(db, ws, mission_id)
+        return db.scalars(
+            select(ModelCall).where(ModelCall.mission_id == mission_id).order_by(ModelCall.created_at)
         ).all()
 
     # ---------------------------------------------------------------------------
