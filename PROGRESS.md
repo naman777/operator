@@ -258,4 +258,12 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - The workspace bearer token is supplied only through `OPERATOR_TOKEN`; it is never a tool parameter or model-visible schema field.
 - Added safe API-error translation, a local console entry point, sample MCP host configuration, and adapter tests covering authorization headers, idempotency, routes, invalid decisions, and sanitized failures.
 - Pinned MCP 2.2 and compatible SSE support; widened Uvicorn to the MCP-compatible supported range.
-- Validation: 83 Python tests passed, Ruff passed, the five MCP v2 tools registered successfully, and inspected input schemas contain no token field.
+- Validation: 83 Python tests passed, Ruff passed, the initial five MCP v2 tools registered successfully, and inspected input schemas contain no token field.
+
+## Phase 5 continuation: approval-controlled mock connectors
+- Added typed email-draft and calendar-event proposals with deterministic validation and low/medium risk classification.
+- Pending connector payloads can be edited as JSON in the Approval Inbox; invalid recipients, unknown fields, and reversed calendar windows are rejected before approval.
+- Approval materializes one idempotent, workspace-scoped `mock` action and records an `action.created` mission event. Email is never sent and no real calendar is contacted.
+- Added list/propose action APIs, migration 010, generated contracts, and a sixth MCP tool for proposing connector actions through the same authorization boundary.
+- Integration coverage includes edit-before-approve, rejection, repeat approval, action idempotency, validation, and workspace isolation.
+- Validation: 85 Python tests passed, Ruff passed, four frontend tests passed, TypeScript and formatting checks passed, and the Next.js production build compiled successfully.

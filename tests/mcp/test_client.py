@@ -38,10 +38,16 @@ def test_safe_read_and_approval_routes():
     client.list_pending_approvals()
     client.resolve_approval("approval-1", "approve", "Reviewed")
     client.list_applications()
+    client.propose_action(
+        "mission-1",
+        "email_draft",
+        {"to": "person@example.com", "subject": "Hello", "body": "Draft"},
+    )
     assert routes[0][1] == "/v1/missions/mission-1/run"
     assert routes[1][1] == "/v1/approvals" and b"status=pending" in routes[1][2]
     assert routes[2][1] == "/v1/approvals/approval-1/approve"
     assert routes[3][1] == "/v1/applications"
+    assert routes[4][1] == "/v1/actions/propose"
 
 
 def test_invalid_decision_and_api_errors_are_safe():

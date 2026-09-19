@@ -2,7 +2,7 @@
 
 A personal work execution agent, starting with evidence-backed opportunity analysis.
 
-**Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve the pipeline action, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
+**Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, and measured regression evaluation.** Open a guest workspace, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, and run the versioned evaluation dataset. Sample jobs remain available for demos.
 
 Matching and drafts use deterministic rules/templates. Resume ingestion appends evidence and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single static JSON-LD JobPosting and preserves the raw snapshot. Browser rendering, vector embeddings, Agents SDK generation, MCP, and model-provider evaluations remain pending. The current evaluation lab measures the deterministic matcher against three versioned cases. See [PROGRESS.md](PROGRESS.md).
 
@@ -42,7 +42,7 @@ The Temporal SDK downloads its official dev-server executable on first use. Its 
 
 ### MCP server
 
-The local stdio MCP service exposes `create_mission`, `get_mission_status`, `list_pending_approvals`, `resolve_approval`, and `list_applications`. It delegates to the authenticated product API, so workspace isolation and approval rules remain identical across the dashboard and MCP clients.
+The local stdio MCP service exposes `create_mission`, `get_mission_status`, `list_pending_approvals`, `resolve_approval`, `list_applications`, and `propose_action`. It delegates to the authenticated product API, so workspace isolation and approval rules remain identical across the dashboard and MCP clients. `propose_action` supports local mock email drafts and calendar events; approval creates an auditable mock record and never contacts an external provider.
 
 Set `OPERATOR_TOKEN` to a token returned by `POST /v1/guest-sessions`, optionally set `OPERATOR_API_URL`, then configure an MCP host to launch:
 

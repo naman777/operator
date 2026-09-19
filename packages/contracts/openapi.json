@@ -1357,6 +1357,71 @@
         }
       }
     },
+    "/v1/approvals/{approval_id}/proposal": {
+      "patch": {
+        "summary": "Edit Approval Proposal",
+        "operationId": "edit_approval_proposal_v1_approvals__approval_id__proposal_patch",
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Approval Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalProposalUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/approvals/{approval_id}/reject": {
       "post": {
         "summary": "Reject",
@@ -1405,6 +1470,112 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/actions/propose": {
+      "post": {
+        "summary": "Propose Action",
+        "operationId": "propose_action_v1_actions_propose_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionProposal"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/actions": {
+      "get": {
+        "summary": "List Actions",
+        "operationId": "list_actions_v1_actions_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExternalActionView"
+                  },
+                  "title": "Response List Actions V1 Actions Get"
                 }
               }
             }
@@ -1932,6 +2103,41 @@
   },
   "components": {
     "schemas": {
+      "ActionProposal": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "mission_id": {
+            "type": "string",
+            "title": "Mission Id"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "email_draft",
+              "calendar_event"
+            ],
+            "title": "Action Type"
+          },
+          "proposed_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Proposed Payload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mission_id",
+          "action_type",
+          "proposed_payload"
+        ],
+        "title": "ActionProposal"
+      },
       "ApplicationView": {
         "properties": {
           "schema_version": {
@@ -2034,6 +2240,27 @@
         ],
         "title": "ApplicationView"
       },
+      "ApprovalProposalUpdate": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "proposed_payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Proposed Payload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "proposed_payload"
+        ],
+        "title": "ApprovalProposalUpdate"
+      },
       "ApprovalResolution": {
         "properties": {
           "schema_version": {
@@ -2130,6 +2357,16 @@
               }
             ],
             "title": "Expires At"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level",
+            "default": "medium"
           },
           "created_at": {
             "type": "string",
@@ -3061,6 +3298,74 @@
           "skills"
         ],
         "title": "Evidence"
+      },
+      "ExternalActionView": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workspace_id": {
+            "type": "string",
+            "title": "Workspace Id"
+          },
+          "mission_id": {
+            "type": "string",
+            "title": "Mission Id"
+          },
+          "approval_id": {
+            "type": "string",
+            "title": "Approval Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "email_draft",
+              "calendar_event"
+            ],
+            "title": "Type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "provider": {
+            "type": "string",
+            "const": "mock",
+            "title": "Provider"
+          },
+          "status": {
+            "type": "string",
+            "const": "created",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "workspace_id",
+          "mission_id",
+          "approval_id",
+          "type",
+          "payload",
+          "provider",
+          "status",
+          "created_at"
+        ],
+        "title": "ExternalActionView"
       },
       "FailureSimulation": {
         "properties": {

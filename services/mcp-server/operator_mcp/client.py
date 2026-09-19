@@ -64,3 +64,14 @@ class OperatorClient:
 
     def list_applications(self):
         return self._request("GET", "/v1/applications")
+
+    def propose_action(self, mission_id: str, action_type: str, proposed_payload: dict):
+        return self._request(
+            "POST",
+            "/v1/actions/propose",
+            json={
+                "mission_id": mission_id,
+                "action_type": action_type,
+                "proposed_payload": proposed_payload,
+            },
+        )

@@ -56,6 +56,8 @@ export default function Home() {
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
   const [evalBusy, setEvalBusy] = useState(false);
+  const [editingApproval, setEditingApproval] = useState("");
+  const [proposalDraft, setProposalDraft] = useState("");
   const [selected, setSelected] = useState<Mission | null>(null);
   const [url, setUrl] = useState("");
   const [goal, setGoal] = useState(
@@ -223,6 +225,26 @@ export default function Home() {
       setApprovals(updated);
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+  async function saveApprovalProposal(approvalId: string) {
+    try {
+      const proposed_payload = JSON.parse(proposalDraft) as Record<
+        string,
+        unknown
+      >;
+      await api<Approval>(`/v1/approvals/${approvalId}/proposal`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ proposed_payload }),
+      });
+      setApprovals(await api<Approval[]>("/v1/approvals", token));
+      setEditingApproval("");
+    } catch (e) {
+      setError(
+        e instanceof SyntaxError
+          ? "Proposal must be valid JSON."
+          : (e as Error).message,
+      );
     }
   }
   async function runEvaluation() {
@@ -632,6 +654,9 @@ export default function Home() {
                       <div className="panel-title">
                         <div>
                           <span className="tag">{approval.action_type}</span>{" "}
+                          <span className="tag">
+                            {approval.risk_level} risk
+                          </span>{" "}
                           <strong style={{ fontSize: 13, marginLeft: 10 }}>
                             Mission {approval.mission_id.slice(0, 8)}…
                           </strong>
@@ -646,14 +671,64 @@ export default function Home() {
                       >
                         Created {new Date(approval.created_at).toLocaleString()}
                       </p>
-                      <details style={{ marginTop: 14 }}>
-                        <summary>Proposed payload</summary>
-                        <pre>
-                          {JSON.stringify(approval.proposed_payload, null, 2)}
-                        </pre>
-                      </details>
+                      {editingApproval === approval.id ? (
+                        <div style={{ marginTop: 14 }}>
+                          <textarea
+                            value={proposalDraft}
+                            onChange={(event) =>
+                              setProposalDraft(event.target.value)
+                            }
+                            rows={10}
+                            aria-label="Editable approval proposal JSON"
+                          />
+                        </div>
+                      ) : (
+                        <details style={{ marginTop: 14 }}>
+                          <summary>Proposed payload</summary>
+                          <pre>
+                            {JSON.stringify(approval.proposed_payload, null, 2)}
+                          </pre>
+                        </details>
+                      )}
                       {approval.status === "pending" && (
                         <div className="approval-actions">
+                          {approval.action_type === "email_draft" ||
+                          approval.action_type === "calendar_event" ? (
+                            editingApproval === approval.id ? (
+                              <>
+                                <button
+                                  className="secondary"
+                                  onClick={() =>
+                                    saveApprovalProposal(approval.id)
+                                  }
+                                >
+                                  Save proposal
+                                </button>
+                                <button
+                                  className="secondary"
+                                  onClick={() => setEditingApproval("")}
+                                >
+                                  Cancel edit
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="secondary"
+                                onClick={() => {
+                                  setEditingApproval(approval.id);
+                                  setProposalDraft(
+                                    JSON.stringify(
+                                      approval.proposed_payload,
+                                      null,
+                                      2,
+                                    ),
+                                  );
+                                }}
+                              >
+                                Edit proposal
+                              </button>
+                            )
+                          ) : null}
                           <button
                             className="primary"
                             onClick={() =>

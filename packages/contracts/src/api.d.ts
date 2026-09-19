@@ -403,6 +403,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/approvals/{approval_id}/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Approval Proposal */
+        patch: operations["edit_approval_proposal_v1_approvals__approval_id__proposal_patch"];
+        trace?: never;
+    };
     "/v1/approvals/{approval_id}/reject": {
         parameters: {
             query?: never;
@@ -414,6 +431,40 @@ export interface paths {
         put?: never;
         /** Reject */
         post: operations["reject_v1_approvals__approval_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/actions/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propose Action */
+        post: operations["propose_action_v1_actions_propose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Actions */
+        get: operations["list_actions_v1_actions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -548,6 +599,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActionProposal */
+        ActionProposal: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Mission Id */
+            mission_id: string;
+            /**
+             * Action Type
+             * @enum {string}
+             */
+            action_type: "email_draft" | "calendar_event";
+            /** Proposed Payload */
+            proposed_payload: {
+                [key: string]: unknown;
+            };
+        };
         /** ApplicationView */
         ApplicationView: {
             /**
@@ -584,6 +655,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** ApprovalProposalUpdate */
+        ApprovalProposalUpdate: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Proposed Payload */
+            proposed_payload: {
+                [key: string]: unknown;
+            };
         };
         /** ApprovalResolution */
         ApprovalResolution: {
@@ -627,6 +711,12 @@ export interface components {
             resolved_at?: string | null;
             /** Expires At */
             expires_at?: string | null;
+            /**
+             * Risk Level
+             * @default medium
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
             /**
              * Created At
              * Format: date-time
@@ -1017,6 +1107,47 @@ export interface components {
             source_location: string;
             /** Skills */
             skills: string[];
+        };
+        /** ExternalActionView */
+        ExternalActionView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Mission Id */
+            mission_id: string;
+            /** Approval Id */
+            approval_id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "email_draft" | "calendar_event";
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Provider
+             * @constant
+             */
+            provider: "mock";
+            /**
+             * Status
+             * @constant
+             */
+            status: "created";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** FailureSimulation */
         FailureSimulation: {
@@ -2214,6 +2345,43 @@ export interface operations {
             };
         };
     };
+    edit_approval_proposal_v1_approvals__approval_id__proposal_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalProposalUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reject_v1_approvals__approval_id__reject_post: {
         parameters: {
             query?: never;
@@ -2238,6 +2406,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_action_v1_actions_propose_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActionProposal"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_actions_v1_actions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalActionView"][];
                 };
             };
             /** @description Validation Error */

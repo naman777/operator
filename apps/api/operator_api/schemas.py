@@ -223,11 +223,34 @@ class ApprovalView(Contract):
     resolved_by: str | None = None
     resolved_at: datetime | None = None
     expires_at: datetime | None = None
+    risk_level: Literal["low", "medium", "high"] = "medium"
     created_at: datetime
 
 
 class ApprovalResolution(Contract):
     note: str | None = None
+
+
+class ApprovalProposalUpdate(Contract):
+    proposed_payload: dict
+
+
+class ActionProposal(Contract):
+    mission_id: str
+    action_type: Literal["email_draft", "calendar_event"]
+    proposed_payload: dict
+
+
+class ExternalActionView(Contract):
+    id: str
+    workspace_id: str
+    mission_id: str
+    approval_id: str
+    type: Literal["email_draft", "calendar_event"]
+    payload: dict
+    provider: Literal["mock"]
+    status: Literal["created"]
+    created_at: datetime
 
 
 class ArtifactCitation(Contract):

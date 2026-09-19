@@ -30,6 +30,7 @@ from .db import (
     StoredProfile,
     ImportedJob,
     EvalRun,
+    ExternalAction,
     database,
     utcnow,
 )
@@ -59,9 +60,12 @@ from .schemas import (
     EvalRunRequest,
     EvalRunView,
     EvalComparison,
+    ActionProposal,
+    ApprovalProposalUpdate,
+    ExternalActionView,
 )
 
-from . import runtime, streaming, profiles, extraction, document_parser, evaluations
+from . import runtime, streaming, profiles, extraction, document_parser, evaluations, connectors
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -462,6 +466,8 @@ def create_app(database_url=None):
     @app.post("/v1/approvals/{approval_id}/approve", response_model=ApprovalView)
     def approve(approval_id: str, body: ApprovalResolution, db: DB, ws: WS):
         approval = get_approval(db, ws, approval_id)
+        if approval.status == "approved":
+            return approval
         if approval.status != "pending":
             raise HTTPException(409, "Approval is no longer pending")
         if approval.expires_at:
@@ -476,6 +482,27 @@ def create_app(database_url=None):
         approval.resolved_at = utcnow()
         approval.resolved_by = "user"
         workflow_id = approval.workflow_id
+        if approval.action_type in connectors.MODELS:
+            existing_action = db.scalar(
+                select(ExternalAction).where(ExternalAction.approval_id == approval.id)
+            )
+            if not existing_action:
+                action = ExternalAction(
+                    id=str(uuid4()),
+                    workspace_id=ws.id,
+                    mission_id=approval.mission_id,
+                    approval_id=approval.id,
+                    type=approval.action_type,
+                    payload=connectors.validate(approval.action_type, approval.proposed_payload),
+                )
+                db.add(action)
+                mission = db.get(Mission, approval.mission_id)
+                runtime.record_event(
+                    db,
+                    mission,
+                    "action.created",
+                    {"action_id": action.id, "action_type": action.type, "provider": "mock"},
+                )
         db.commit()
         # Send the Temporal signal after the DB commit so the signal is only
         # delivered once the approval is durably persisted.
@@ -499,6 +526,24 @@ def create_app(database_url=None):
                     loop.run_until_complete(_signal())
             except Exception as exc:
                 logger.warning("Could not dispatch approval signal: %s", type(exc).__name__)
+        return approval
+
+    @app.patch("/v1/approvals/{approval_id}/proposal", response_model=ApprovalView)
+    def edit_approval_proposal(
+        approval_id: str, body: ApprovalProposalUpdate, db: DB, ws: WS
+    ):
+        approval = get_approval(db, ws, approval_id)
+        if approval.status != "pending":
+            raise HTTPException(409, "Approval is no longer pending")
+        if approval.action_type not in connectors.MODELS:
+            raise HTTPException(409, "This approval proposal cannot be edited")
+        try:
+            approval.proposed_payload = connectors.validate(
+                approval.action_type, body.proposed_payload
+            )
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        db.commit()
         return approval
 
     @app.post("/v1/approvals/{approval_id}/reject", response_model=ApprovalView)
@@ -532,6 +577,40 @@ def create_app(database_url=None):
             except Exception as exc:
                 logger.warning("Could not dispatch rejection signal: %s", type(exc).__name__)
         return approval
+
+    @app.post("/v1/actions/propose", response_model=ApprovalView, status_code=201)
+    def propose_action(body: ActionProposal, db: DB, ws: WS):
+        mission = get_owned(db, ws, body.mission_id)
+        try:
+            payload = connectors.validate(body.action_type, body.proposed_payload)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        approval = Approval(
+            id=str(uuid4()),
+            mission_id=mission.id,
+            workspace_id=ws.id,
+            action_type=body.action_type,
+            proposed_payload=payload,
+            risk_level=connectors.RISK[body.action_type],
+            expires_at=utcnow() + timedelta(hours=24),
+        )
+        db.add(approval)
+        runtime.record_event(
+            db,
+            mission,
+            "approval.requested",
+            {"approval_id": approval.id, "action_type": approval.action_type},
+        )
+        db.commit()
+        return approval
+
+    @app.get("/v1/actions", response_model=list[ExternalActionView])
+    def list_actions(db: DB, ws: WS):
+        return db.scalars(
+            select(ExternalAction)
+            .where(ExternalAction.workspace_id == ws.id)
+            .order_by(ExternalAction.created_at.desc())
+        ).all()
 
     # ---------------------------------------------------------------------------
     # Artifacts

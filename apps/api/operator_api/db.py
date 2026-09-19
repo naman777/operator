@@ -118,6 +118,7 @@ class Approval(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Temporal workflow handle ID; set when the workflow is waiting for the signal.
     workflow_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    risk_level: Mapped[str] = mapped_column(String, default="medium")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -209,6 +210,19 @@ class EvalRun(Base):
     evaluator_version: Mapped[str] = mapped_column(String)
     metrics: Mapped[dict] = mapped_column(JSON)
     case_results: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ExternalAction(Base):
+    __tablename__ = "external_actions"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    mission_id: Mapped[str] = mapped_column(ForeignKey("missions.id"), index=True)
+    approval_id: Mapped[str] = mapped_column(ForeignKey("approvals.id"), unique=True)
+    type: Mapped[str] = mapped_column(String)
+    payload: Mapped[dict] = mapped_column(JSON)
+    provider: Mapped[str] = mapped_column(String, default="mock")
+    status: Mapped[str] = mapped_column(String, default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

@@ -46,6 +46,12 @@ def list_applications() -> list[dict]:
     return client().list_applications()
 
 
+@mcp.tool()
+def propose_action(mission_id: str, action_type: str, proposed_payload: dict) -> dict:
+    """Propose a mock email draft or calendar event for human approval."""
+    return client().propose_action(mission_id, action_type, proposed_payload)
+
+
 def main():
     mcp.run()
 
