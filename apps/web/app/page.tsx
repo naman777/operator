@@ -17,7 +17,8 @@ type Screen =
   | "Candidate Profile"
   | "Application Pipeline"
   | "Approval Inbox"
-  | "Evaluation Lab";
+  | "Evaluation Lab"
+  | "Project Guide";
 const screens: Screen[] = [
   "Mission Control",
   "Opportunities",
@@ -25,8 +26,9 @@ const screens: Screen[] = [
   "Application Pipeline",
   "Approval Inbox",
   "Evaluation Lab",
+  "Project Guide",
 ];
-const screenIcons = ["▦", "◇", "◎", "▤", "▣", "⌁"];
+const screenIcons = ["▦", "◇", "◎", "▤", "▣", "⌁", "i"];
 
 const STAGE_ORDER = ["saved", "applied", "interview", "offer", "rejected"];
 const STAGE_LABELS: Record<string, string> = {
@@ -324,7 +326,9 @@ export default function Home() {
                     ? "Track every role from saved to offer."
                     : screen === "Approval Inbox"
                       ? "Review and approve pending agent actions."
-                      : "Turn a promising role into a clear, informed next step."}
+                      : screen === "Project Guide"
+                        ? "Architecture, safety boundaries, and the fastest path through the demo."
+                        : "Turn a promising role into a clear, informed next step."}
               </p>
             </div>
             <span className="pill">
@@ -350,8 +354,27 @@ export default function Home() {
                 mission and inspect its audit trail, without connecting any
                 private accounts.
               </p>
+              <div className="demo-steps" aria-label="Guided demo steps">
+                <div>
+                  <span>1</span>
+                  <strong>Open a private guest workspace</strong>
+                  <small>No signup or external account is required.</small>
+                </div>
+                <div>
+                  <span>2</span>
+                  <strong>Run a seeded opportunity mission</strong>
+                  <small>
+                    Watch durable research, matching, and verification.
+                  </small>
+                </div>
+                <div>
+                  <span>3</span>
+                  <strong>Inspect evidence and approvals</strong>
+                  <small>Every claim stays linked to a stored source.</small>
+                </div>
+              </div>
               <button className="primary" disabled={busy} onClick={enter}>
-                {busy ? "Opening…" : "Open guest workspace →"}
+                {busy ? "Opening…" : "Start guided demo →"}
               </button>
             </div>
           ) : selected ? (
@@ -751,6 +774,123 @@ export default function Home() {
                   ))}
                 </div>
               )}
+            </>
+          ) : screen === "Project Guide" ? (
+            <>
+              <section className="panel guide-hero">
+                <div>
+                  <p className="eyebrow">RECRUITER DEMO PATH</p>
+                  <h2>See the complete decision trail in three steps.</h2>
+                  <p className="muted">
+                    The demo uses synthetic candidate data and local mock
+                    actions. It does not submit applications, send email, or
+                    modify an external calendar.
+                  </p>
+                </div>
+                <button
+                  className="primary"
+                  onClick={() => setScreen("Mission Control")}
+                >
+                  Start a mission →
+                </button>
+              </section>
+              <div className="guide-grid">
+                <section className="panel">
+                  <p className="eyebrow">01 / INPUT</p>
+                  <h2>Choose a role</h2>
+                  <p className="muted">
+                    Select a seeded role or import a supported public HTTPS job
+                    page. Its saved snapshot becomes immutable source evidence
+                    for the mission.
+                  </p>
+                  <button
+                    className="secondary"
+                    onClick={() => setScreen("Opportunities")}
+                  >
+                    Open opportunities
+                  </button>
+                </section>
+                <section className="panel">
+                  <p className="eyebrow">02 / EXECUTION</p>
+                  <h2>Inspect the workflow</h2>
+                  <p className="muted">
+                    Temporal checkpoints planning, extraction, company research,
+                    matching, verification, and artifact generation. Refreshes
+                    and retries reconstruct stored state.
+                  </p>
+                </section>
+                <section className="panel">
+                  <p className="eyebrow">03 / DECISION</p>
+                  <h2>Review before action</h2>
+                  <p className="muted">
+                    Fit scores are reproducible, drafts retain citations, and
+                    connector proposals wait for explicit approval. Current
+                    connectors remain local mocks.
+                  </p>
+                  <button
+                    className="secondary"
+                    onClick={() => setScreen("Approval Inbox")}
+                  >
+                    Open approvals
+                  </button>
+                </section>
+              </div>
+              <section className="panel architecture-panel">
+                <div className="panel-title">
+                  <h2>System architecture</h2>
+                  <span className="tag">LOCAL MVP</span>
+                </div>
+                <div
+                  className="architecture-flow"
+                  aria-label="System architecture flow"
+                >
+                  <div>
+                    <strong>Next.js</strong>
+                    <small>Workspace UI and SSE client</small>
+                  </div>
+                  <span>→</span>
+                  <div>
+                    <strong>FastAPI</strong>
+                    <small>Authorization, contracts, persistence</small>
+                  </div>
+                  <span>→</span>
+                  <div>
+                    <strong>Temporal</strong>
+                    <small>Durable workflow and approvals</small>
+                  </div>
+                  <span>→</span>
+                  <div>
+                    <strong>Postgres</strong>
+                    <small>Audit state and pgvector evidence</small>
+                  </div>
+                </div>
+              </section>
+              <div className="guide-grid two">
+                <section className="panel">
+                  <h2>Implemented safeguards</h2>
+                  <ul className="check-list">
+                    <li>Workspace authorization and idempotent writes</li>
+                    <li>Private-network blocking and bounded extraction</li>
+                    <li>
+                      Exact source citations and deterministic verification
+                    </li>
+                    <li>Model time, token, and mission-budget limits</li>
+                    <li>Human approval before connector actions</li>
+                  </ul>
+                </section>
+                <section className="panel">
+                  <h2>Current limitations</h2>
+                  <ul className="check-list limitations">
+                    <li>Guest sessions are local and expire after 24 hours</li>
+                    <li>Email and calendar integrations are mock connectors</li>
+                    <li>Full PostgreSQL and Docker verification is pending</li>
+                    <li>No public deployment, production monitoring, or SLA</li>
+                    <li>
+                      Live model validation needs an operator-supplied key
+                    </li>
+                  </ul>
+                </section>
+              </div>
             </>
           ) : (
             <>

@@ -324,3 +324,10 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added case pass rate and eligibility accuracy, category labels, expected/actual eligibility results, and regression detection for the new quality metrics. Historical stored runs remain readable and comparable.
 - Updated Evaluation Lab to run v2 by default and display pass rate, eligibility accuracy, categories, and eligibility outcomes.
 - Validation: 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
+
+## Phase 8 start: recruiter-facing demo guide
+- Reworked the guest entry into a clear three-step guided demo without adding signup or external-account dependencies.
+- Added an in-product Project Guide with direct demo navigation, a readable system architecture flow, implemented safeguards, and explicit local-MVP limitations.
+- Added responsive layouts for the demo steps, guide cards, architecture flow, and safety/limitation panels, plus recruiter-facing page metadata.
+- Desktop (1440x1000) and mobile (390x844) landing-page screenshots were rendered with local Playwright and visually inspected. The bundled Windows computer-use runtime was unavailable because its configured Node runtime path could not be found.
+- Validation: 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
