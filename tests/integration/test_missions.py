@@ -80,6 +80,8 @@ def test_auth_validation_and_request_ids(client):
         == 422
     )
     assert client.get("/health").headers["X-Request-ID"]
+    assert client.get("/health/live").json() == {"status": "ok"}
+    assert client.get("/health/ready").json()["status"] == "ok"
 
 
 def test_seed_contracts(client):

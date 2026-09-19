@@ -331,3 +331,10 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added responsive layouts for the demo steps, guide cards, architecture flow, and safety/limitation panels, plus recruiter-facing page metadata.
 - Desktop (1440x1000) and mobile (390x844) landing-page screenshots were rendered with local Playwright and visually inspected. The bundled Windows computer-use runtime was unavailable because its configured Node runtime path could not be found.
 - Validation: 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
+
+## Phase 8 continuation: deployment readiness
+- Added separate `/health/live` and database-backed `/health/ready` endpoints while preserving `/health` compatibility.
+- Added `compose.production.yaml` for immutable API/web images, a one-shot migration dependency, managed PostgreSQL and Temporal endpoints, health-gated startup, restart policies, no-new-privileges, temporary filesystems, and loopback web binding behind a TLS proxy.
+- Added a production environment template with placeholder-only values and an operations runbook covering prerequisites, configuration validation, rollout, rollback, database/Temporal recovery, provider outages, and required alerts. CI now rejects invalid production Compose changes.
+- Production Compose configuration resolves successfully without contacting the unavailable Docker daemon. Public deployment remains blocked on production authentication, rate limiting, secret management, and staging restore verification.
+- Validation: production Compose config passed; 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.

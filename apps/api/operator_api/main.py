@@ -165,11 +165,17 @@ def create_app(database_url=None):
             raise HTTPException(404, "Mission not found")
         return mission
 
-    @app.get("/health")
-    def health():
+    @app.get("/health/live")
+    def liveness():
+        return {"status": "ok"}
+
+    def database_readiness():
         with engine.connect() as conn:
             conn.exec_driver_sql("SELECT 1")
         return {"status": "ok", "execution_mode": "synthetic-fixture"}
+
+    app.get("/health")(database_readiness)
+    app.get("/health/ready")(database_readiness)
 
     @app.post("/v1/guest-sessions", response_model=GuestSession, status_code=201)
     def guest(db: DB, response: Response):

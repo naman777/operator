@@ -81,6 +81,8 @@ docker compose up --build
 
 Compose defines web, API, workflow worker, PostgreSQL/pgvector, Redis, Temporal, and MinIO. The worker waits for the migrated API to become healthy. Redis fan-out and object storage are not wired yet. Langfuse is not included. Container configuration validates, but full Docker/PostgreSQL runtime verification remains pending. Local credentials and loopback ports are for development only.
 
+For a production-shaped rollout, use `compose.production.yaml` with immutable registry images and managed PostgreSQL/Temporal services. It runs migrations as a one-shot dependency, separates API liveness from database readiness, and binds the web service to loopback by default for placement behind a TLS proxy. See [docs/deployment.md](docs/deployment.md) and [.env.production.example](.env.production.example). This configuration is deployment scaffolding; the guest-only build still requires production authentication, rate limits, secret management, and staging verification before public exposure.
+
 ## Demo
 
 1. Open a guest workspace and choose Northstar.

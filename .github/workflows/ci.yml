@@ -28,3 +28,4 @@ jobs:
       - run: pnpm test:web
       - run: pnpm typecheck
       - run: pnpm build
+      - run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet

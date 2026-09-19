@@ -5,10 +5,42 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Liveness",
+        "operationId": "liveness_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
-        "summary": "Health",
-        "operationId": "health_health_get",
+        "summary": "Database Readiness",
+        "operationId": "database_readiness_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Database Readiness",
+        "operationId": "database_readiness_health_ready_get",
         "responses": {
           "200": {
             "description": "Successful Response",
