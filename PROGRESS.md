@@ -226,4 +226,4 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - `e56a977`: profile correction and resume evidence UI.
 - `d17ecb8`: guarded public job snapshot ingestion and workflow integration.
 - `2695773`: public import UI and source-aware inspector.
-- `PENDING`: PDF/DOCX upload ingestion and file upload UI.
+- `0a19447`: PDF and DOCX resume upload ingestion and file upload UI.
