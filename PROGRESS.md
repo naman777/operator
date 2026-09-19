@@ -227,7 +227,7 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - `d17ecb8`: guarded public job snapshot ingestion and workflow integration.
 - `2695773`: public import UI and source-aware inspector.
 - `0a19447`: PDF and DOCX resume upload ingestion and file upload UI.
-- `PENDING`: semantic token-overlap evidence matching.
+- `fc0ea48`: semantic token-overlap evidence matching.
 
 ## Phase 4 continuation: Semantic token-overlap evidence matching
 - Added `services/workflow-worker/operator_worker/matcher.py`: `tokenize()` (stopword removal + lightweight suffix stripping), `jaccard()`, `score_requirement()` (exact skill-list fast path + token-overlap fallback). Pure Python stdlib, no new dependencies.
