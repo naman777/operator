@@ -3,7 +3,9 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY apps/api apps/api
 COPY services/workflow-worker services/workflow-worker
+COPY services/mcp-server services/mcp-server
 RUN pip install --no-cache-dir .
+RUN python -m playwright install --with-deps chromium
 COPY data data
 ENV OPERATOR_DATA_DIR=/app/data/demo
 COPY scripts scripts

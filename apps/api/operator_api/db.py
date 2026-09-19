@@ -7,6 +7,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     Index,
     String,
     UniqueConstraint,
@@ -199,6 +200,7 @@ class ImportedJob(Base):
     content_hash: Mapped[str] = mapped_column(String)
     posting: Mapped[dict] = mapped_column(JSON)
     snapshot: Mapped[str] = mapped_column(String)
+    screenshot: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

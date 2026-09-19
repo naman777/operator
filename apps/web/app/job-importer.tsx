@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { components } from "@operator/contracts";
 import { request } from "../lib/api";
 type Receipt = components["schemas"]["ImportReceipt"];
@@ -15,18 +15,37 @@ export function JobImporter({
   const [importedUrl, setImportedUrl] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState("");
+  useEffect(
+    () => () => {
+      if (screenshotUrl) URL.revokeObjectURL(screenshotUrl);
+    },
+    [screenshotUrl],
+  );
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setBusy(true);
     setReceipt(null);
+    setScreenshotUrl("");
     try {
-      setReceipt(
-        await request<Receipt>("/v1/opportunities/import", token, {
+      const imported = await request<Receipt>(
+        "/v1/opportunities/import",
+        token,
+        {
           method: "POST",
           body: JSON.stringify({ url }),
-        }),
+        },
       );
+      setReceipt(imported);
+      if (imported.screenshot_available) {
+        const response = await fetch(
+          `/api/v1/opportunities/imports/${imported.import_id}/screenshot`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (response.ok)
+          setScreenshotUrl(URL.createObjectURL(await response.blob()));
+      }
       setImportedUrl(url);
     } catch (cause) {
       setError((cause as Error).message);
@@ -38,9 +57,9 @@ export function JobImporter({
     <section className="panel" style={{ marginBottom: 24 }}>
       <h2>Import a public job</h2>
       <p className="muted">
-        Supports HTTPS detail pages containing a single structured JobPosting.
-        The fetched source is saved in your workspace. JavaScript-only pages and
-        unsupported formats may require a later extractor.
+        Supports HTTPS detail pages containing one structured JobPosting. Static
+        HTML is preferred; JavaScript pages use a guarded browser fallback. The
+        final source snapshot is saved in your workspace.
       </p>
       <form onSubmit={submit}>
         <label htmlFor="import-url">Job page URL</label>
@@ -71,6 +90,13 @@ export function JobImporter({
             extracted. Eligibility remains unverified.
           </small>
           <blockquote>{receipt.posting.sources[0]?.excerpt}</blockquote>
+          {screenshotUrl && (
+            <img
+              src={screenshotUrl}
+              alt="Rendered job page captured during import"
+              style={{ width: "100%", borderRadius: 8, marginBottom: 16 }}
+            />
+          )}
           <button className="primary" onClick={() => onSelect(importedUrl)}>
             Create mission for this job
           </button>

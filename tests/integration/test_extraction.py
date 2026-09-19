@@ -3,7 +3,7 @@ from datetime import date
 from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
-from operator_api import extraction
+from operator_api import browser_renderer, extraction
 from operator_api.main import create_app
 from operator_api.db import database
 from operator_worker.activities import Activities
@@ -142,6 +142,41 @@ def test_import_persistence_workspace_isolation_and_workflow(tmp_path):
         assert run["execution_mode"] == "public-snapshot"
         assert len(run["result"]["artifact_ids"]) == 4
     engine.dispose()
+
+
+def test_browser_fallback_persists_workspace_scoped_screenshot(tmp_path):
+    url = f"sqlite:///{tmp_path / 'browser.db'}"
+    with TestClient(create_app(url)) as client:
+        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        with (
+            patch("operator_api.extraction.fetch", return_value=("https://jobs.example/role", "<div/>")),
+            patch(
+                "operator_api.browser_renderer.render",
+                return_value=("https://jobs.example/role", page(), b"\x89PNG\r\nmock"),
+            ),
+        ):
+            receipt = client.post(
+                "/v1/opportunities/import", headers=headers, json={"url": "https://jobs.example/role"}
+            ).json()
+        screenshot = client.get(
+            f"/v1/opportunities/imports/{receipt['import_id']}/screenshot", headers=headers
+        )
+        assert screenshot.status_code == 200
+        assert screenshot.headers["content-type"] == "image/png"
+        assert screenshot.content.startswith(b"\x89PNG")
+        assert client.get(
+            f"/v1/opportunities/imports/{receipt['import_id']}/screenshot", headers=other
+        ).status_code == 404
+
+
+def test_browser_request_guard_blocks_cross_origin_private_and_nonessential_requests():
+    with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("1.1.1.1", 443))]):
+        assert browser_renderer.request_allowed("https://jobs.example/app.js", "jobs.example", "script")
+        assert not browser_renderer.request_allowed("https://cdn.example/app.js", "jobs.example", "script")
+        assert not browser_renderer.request_allowed("https://jobs.example/logo.png", "jobs.example", "image")
+    with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("127.0.0.1", 443))]):
+        assert not browser_renderer.request_allowed("https://jobs.example/app.js", "jobs.example", "script")
 
 
 def test_redirect_to_private_host_is_revalidated():

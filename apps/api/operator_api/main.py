@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import StreamingResponse
+from playwright.sync_api import Error as PlaywrightError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -65,7 +66,16 @@ from .schemas import (
     ExternalActionView,
 )
 
-from . import runtime, streaming, profiles, extraction, document_parser, evaluations, connectors
+from . import (
+    runtime,
+    streaming,
+    profiles,
+    extraction,
+    document_parser,
+    evaluations,
+    connectors,
+    browser_renderer,
+)
 
 configure_logging()
 logger = logging.getLogger("operator.api")
@@ -662,8 +672,18 @@ def create_app(database_url=None):
     def import_job(body: OpportunityImport, db: DB, ws: WS):
         try:
             final_url, html = extraction.fetch(str(body.url))
-            posting = extraction.parse(final_url, html)
-        except (ValueError, OSError, http.client.HTTPException) as exc:
+            screenshot = None
+            try:
+                posting = extraction.parse(final_url, html)
+            except ValueError:
+                final_url, html, screenshot = browser_renderer.render(final_url)
+                posting = extraction.parse(final_url, html)
+        except (
+            ValueError,
+            OSError,
+            http.client.HTTPException,
+            PlaywrightError,
+        ) as exc:
             raise HTTPException(422, "Could not import a supported public HTTPS JobPosting page.") from exc
         row = ImportedJob(
             id=str(uuid4()),
@@ -672,10 +692,23 @@ def create_app(database_url=None):
             content_hash=hashlib.sha256(html.encode()).hexdigest(),
             posting=posting.model_dump(mode="json"),
             snapshot=html,
+            screenshot=screenshot,
         )
         db.add(row)
         db.commit()
-        return {"import_id": row.id, "posting": posting}
+        return {"import_id": row.id, "posting": posting, "screenshot_available": screenshot is not None}
+
+    @app.get("/v1/opportunities/imports/{import_id}/screenshot")
+    def imported_job_screenshot(import_id: str, db: DB, ws: WS):
+        row = db.scalar(
+            select(ImportedJob).where(
+                ImportedJob.id == import_id,
+                ImportedJob.workspace_id == ws.id,
+            )
+        )
+        if not row or not row.screenshot:
+            raise HTTPException(404, "Screenshot not found")
+        return Response(content=row.screenshot, media_type="image/png")
 
     # ---------------------------------------------------------------------------
     # Evaluation lab

@@ -526,6 +526,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/opportunities/imports/{import_id}/screenshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Imported Job Screenshot */
+        get: operations["imported_job_screenshot_v1_opportunities_imports__import_id__screenshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/evals/runs": {
         parameters: {
             query?: never;
@@ -1192,6 +1209,11 @@ export interface components {
             /** Import Id */
             import_id: string;
             posting: components["schemas"]["JobPosting"];
+            /**
+             * Screenshot Available
+             * @default false
+             */
+            screenshot_available: boolean;
         };
         /** JobPosting */
         JobPosting: {
@@ -2610,6 +2632,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    imported_job_screenshot_v1_opportunities_imports__import_id__screenshot_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

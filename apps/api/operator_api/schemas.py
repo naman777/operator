@@ -318,6 +318,7 @@ class OpportunityImport(Contract):
 class ImportReceipt(Contract):
     import_id: str
     posting: JobPosting
+    screenshot_available: bool = False
 
 
 class EvalRunRequest(Contract):

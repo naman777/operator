@@ -267,3 +267,12 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added list/propose action APIs, migration 010, generated contracts, and a sixth MCP tool for proposing connector actions through the same authorization boundary.
 - Integration coverage includes edit-before-approve, rejection, repeat approval, action idempotency, validation, and workspace isolation.
 - Validation: 85 Python tests passed, Ruff passed, four frontend tests passed, TypeScript and formatting checks passed, and the Next.js production build compiled successfully.
+
+## Phase 2/4 continuation: guarded Playwright extraction
+- Static pinned-IP HTTPS extraction remains the fast path. Pages without a server-rendered JobPosting now fall back to headless Chromium.
+- Browser navigation is restricted to the original validated public HTTPS hostname; private/reserved destinations, cross-origin requests, images, fonts, media, and other nonessential resource types are aborted.
+- Rendering has a 20-second navigation timeout, a 2 MB HTML limit, a 5 MB screenshot limit, blocked service workers, and host resolver pinning for the original hostname.
+- Browser-rendered HTML becomes the stored source snapshot. PNG screenshots are stored in the workspace, served through an authenticated endpoint, and previewed after import.
+- Added migration 011, Playwright runtime dependency, generated contracts, browser-launch smoke coverage, fallback persistence tests, request-guard tests, and workspace-isolation checks.
+- API/worker container builds now include the MCP package required by project metadata and install Chromium with its system dependencies.
+- Validation: real headless Chromium launch and screenshot smoke passed; 87 Python tests, Ruff, four frontend tests, TypeScript, formatting, and the Next.js production build passed.

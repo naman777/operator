@@ -1827,6 +1827,59 @@
         }
       }
     },
+    "/v1/opportunities/imports/{import_id}/screenshot": {
+      "get": {
+        "summary": "Imported Job Screenshot",
+        "operationId": "imported_job_screenshot_v1_opportunities_imports__import_id__screenshot_get",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/evals/runs": {
       "post": {
         "summary": "Run Evaluation",
@@ -3440,6 +3493,11 @@
           },
           "posting": {
             "$ref": "#/components/schemas/JobPosting"
+          },
+          "screenshot_available": {
+            "type": "boolean",
+            "title": "Screenshot Available",
+            "default": false
           }
         },
         "additionalProperties": false,
