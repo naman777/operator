@@ -3,7 +3,7 @@
 Updated: 2026-09-19
 
 ## Current milestone
-PDF and DOCX resume file upload ingestion is implemented. Next: chunk and embed evidence with pgvector (semantic matching), real LLM-backed matching, browser extraction, durable Temporal approval signals.
+Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -49,7 +49,7 @@ PDF and DOCX resume file upload ingestion is implemented. Next: chunk and embed 
 ## In progress / next work
 Phase 4 is in progress (plain-text ingestion and static public snapshots completed):
 1. ~~Extend profile ingestion to PDF/DOCX and parse resume into structured education, skills, experience, dates, and preferences.~~ **Done.**
-2. Chunk and embed evidence with provenance (pgvector).
+2. ~~Chunk and embed evidence with provenance (pgvector / semantic matching).~~ **Done** (deterministic token-overlap; pgvector deferred until Docker stack is available).
 3. Feed real, source-backed job constraints and ingested profile data into the implemented deterministic eligibility checks.
 4. Replace exact fixture skill matching with structured semantic matching while preserving the reproducible score and evidence matrix.
 5. Extend the implemented cited template drafts with controlled model drafting and immutable revisions.
@@ -227,3 +227,10 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - `d17ecb8`: guarded public job snapshot ingestion and workflow integration.
 - `2695773`: public import UI and source-aware inspector.
 - `0a19447`: PDF and DOCX resume upload ingestion and file upload UI.
+- `PENDING`: semantic token-overlap evidence matching.
+
+## Phase 4 continuation: Semantic token-overlap evidence matching
+- Added `services/workflow-worker/operator_worker/matcher.py`: `tokenize()` (stopword removal + lightweight suffix stripping), `jaccard()`, `score_requirement()` (exact skill-list fast path + token-overlap fallback). Pure Python stdlib, no new dependencies.
+- Rewrote `analysis.py` `match()`: exact skill-list exact match → `supported` (fast path, fixture-compatible); Jaccard ≥ 0.40 → `supported`; Jaccard ≥ 0.15 → `partial` (40% weight contribution); below → `missing`. Fit score reflects both tiers.
+- Updated `verify()`: accepts `partial` status alongside `supported`; restores `"Unsupported positive match"` error string for backwards compatibility with existing security tests.
+- Validation: 77 tests passed (13 new: 4 tokenizer/Jaccard units, 5 score_requirement units, 3 match+verify integration, 1 fixture-compat). Ruff clean. No new dependencies.

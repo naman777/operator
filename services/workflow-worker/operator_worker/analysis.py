@@ -1,4 +1,10 @@
-"""Deterministic fixture matching. This is not semantic/model-based analysis."""
+"""Requirement matching and mission result assembly.
+
+match()  – token-overlap soft matcher; exact skill-list match short-circuits
+           to 'supported' so fixture evidence is unaffected.
+verify() – provenance checks; accepts 'partial' in addition to 'supported'.
+result() – assembles the final MissionResult from matched/verified outputs.
+"""
 
 from operator_api.schemas import (
     CandidateProfile,
@@ -9,34 +15,51 @@ from operator_api.schemas import (
 )
 
 from .eligibility import evaluate
+from .matcher import PARTIAL_WEIGHT, score_requirement, tokenize
 
 
 def match(job: JobPosting, profile: CandidateProfile):
     matches = []
-    numerator = denominator = 0
+    numerator = denominator = 0.0
     for requirement in job.requirements:
-        ids = [
-            e.id for e in profile.evidence if requirement.text.casefold() in {s.casefold() for s in e.skills}
-        ]
-        supported = requirement.category == "skill" and bool(ids)
-        weight = 2 if requirement.importance == "required" else 1
-        numerator += weight if supported else 0
+        req_tokens = tokenize(requirement.text)
+        # Pass the requirement text as a single-token skill name so the exact
+        # skill-list fast path can fire when the evidence skills list already
+        # contains the verbatim requirement text (fixture data).
+        req_skill_names = frozenset({requirement.text.casefold()})
+        status, best_score, evidence_ids = score_requirement(
+            req_tokens, profile.evidence, skill_names=req_skill_names
+        )
+        weight = 2.0 if requirement.importance == "required" else 1.0
+        if status == "supported":
+            contribution = weight
+            explanation = (
+                f"Token-overlap match (Jaccard {best_score:.2f}); "
+                f"requirement is fully supported by stored candidate evidence."
+            )
+        elif status == "partial":
+            contribution = weight * PARTIAL_WEIGHT
+            explanation = (
+                f"Partial token-overlap (Jaccard {best_score:.2f}); "
+                f"requirement is partially supported — manual review recommended."
+            )
+        else:
+            contribution = 0.0
+            explanation = "No supporting candidate evidence was found."
+        numerator += contribution
         denominator += weight
         matches.append(
             RequirementMatch(
                 requirement_id=requirement.id,
-                status="supported" if supported else "missing",
-                evidence_ids=ids if supported else [],
-                explanation="Exact skill match in stored synthetic candidate evidence."
-                if supported
-                else "No supporting candidate evidence was found by the fixture matcher.",
+                status=status,
+                evidence_ids=evidence_ids,
+                explanation=explanation,
             )
         )
     eligibility, eligibility_checks = evaluate(job, profile)
-
     return {
         "matches": [m.model_dump(mode="json") for m in matches],
-        "score": round(100 * numerator / denominator, 2) if denominator else 0,
+        "score": round(100 * numerator / denominator, 2) if denominator else 0.0,
         "eligibility": eligibility,
         "eligibility_checks": eligibility_checks,
         "profile": profile.model_dump(mode="json"),
@@ -56,19 +79,19 @@ def verify(job: JobPosting, matched: dict):
     if any(r.source_id not in sources for r in job.requirements):
         raise ValueError("Missing job source")
     for m in matches:
-        if m.status != "missing" and not m.evidence_ids:
+        # Both 'supported' and 'partial' matches must reference real evidence IDs.
+        if m.status in ("supported", "partial") and not m.evidence_ids:
             raise ValueError("Unsupported positive match")
         for eid in m.evidence_ids:
-            if eid not in evidence or requirements[m.requirement_id].text.casefold() not in {
-                skill.casefold() for skill in evidence[eid].skills
-            }:
-                raise ValueError("Evidence does not support the match")
+            if eid not in evidence:
+                raise ValueError("Evidence ID not found in profile")
+    # Re-run match() deterministically to confirm stored result is reproducible.
     expected = match(job, profile)
     if any(
         matched.get(key) != expected.get(key)
         for key in ("score", "eligibility", "matches", "eligibility_checks")
     ):
-        raise ValueError("Stored match does not reproduce the fixture rubric")
+        raise ValueError("Stored match does not reproduce the deterministic rubric")
     return {"verified": True, "requirements_checked": len(matches), "source_ids": sorted(sources)}
 
 
