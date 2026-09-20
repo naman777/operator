@@ -33,22 +33,24 @@ def test_evaluation_run_is_measured_and_persisted(tmp_path):
         ]
 
 
-def test_expanded_evaluation_covers_matching_eligibility_and_adversarial_cases(tmp_path):
+def test_expanded_evaluation_covers_planned_forty_case_suite(tmp_path):
     with TestClient(create_app(f"sqlite:///{tmp_path / 'expanded-eval.db'}")) as client:
         headers = session(client)
         response = client.post(
             "/v1/evals/runs",
             headers=headers,
-            json={"dataset_version": "opportunity-v2"},
+            json={"dataset_version": "opportunity-v3"},
         )
         assert response.status_code == 201
         run = response.json()
-        assert run["evaluator_version"] == "deterministic-v2"
-        assert run["metrics"]["case_count"] == 15
+        assert run["evaluator_version"] == "deterministic-v3"
+        assert run["metrics"]["case_count"] == 40
         assert run["metrics"]["pass_rate"] == 1
         assert run["metrics"]["eligibility_accuracy"] == 1
         assert run["metrics"]["requirement_accuracy"] == 1
         assert run["metrics"]["unsupported_positive_rate"] == 0
+        assert run["metrics"]["p50_latency_ms"] >= 0
+        assert run["metrics"]["p95_latency_ms"] >= run["metrics"]["p50_latency_ms"]
         assert {case["category"] for case in run["case_results"]} >= {
             "matching",
             "weak-evidence",
@@ -58,6 +60,7 @@ def test_expanded_evaluation_covers_matching_eligibility_and_adversarial_cases(t
             "eligibility",
             "eligibility-ambiguity",
             "partial-extraction",
+            "missing-location",
         }
 
 

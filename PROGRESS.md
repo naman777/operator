@@ -1,6 +1,6 @@
 # Operator implementation progress
 
-Updated: 2026-09-19
+Updated: 2026-09-20
 
 ### Checkpoint: guarded Agents SDK enrichment
 - Added an explicitly enabled, tool-free Agents SDK adapter with typed structured outputs for semantic explanation review and cited application drafting.
@@ -37,7 +37,7 @@ Updated: 2026-09-19
 - Backed up the ignored local SQLite database and applied migration 014. The current database had no eligible stored-document chunks to backfill; future ingestion is indexed immediately.
 
 ## Current milestone
-Semantic token-overlap evidence matching is implemented. Fit score now reflects partial matches for real job postings. Next: Playwright browser extraction for live job pages, LLM-backed requirement parsing, pgvector embeddings.
+The local portfolio release now includes guarded browser extraction, source-backed model parsing and drafting, pgvector retrieval, a 40-case deterministic evaluation suite, per-process API admission controls, and durable dispatch dead letters. Next release blockers are account authentication, shared multi-replica rate enforcement, managed secret integration, and a verified staging restore/deployment.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -338,3 +338,13 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added a production environment template with placeholder-only values and an operations runbook covering prerequisites, configuration validation, rollout, rollback, database/Temporal recovery, provider outages, and required alerts. CI now rejects invalid production Compose changes.
 - Production Compose configuration resolves successfully without contacting the unavailable Docker daemon. Public deployment remains blocked on production authentication, rate limiting, secret management, and staging restore verification.
 - Validation: production Compose config passed; 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
+
+## Phase 6/7 continuation: admission controls, dead letters, and 40-case evaluation
+- Added configurable sliding-window limits for general API traffic, guest-session creation, and mission mutations. Identifiers are one-way hashed, raw tokens and client addresses are not retained, responses include `Retry-After` and rate-limit headers, and the in-memory key set is bounded.
+- Mission limits are workspace-token scoped while the general and guest limits remain client-address scoped so rotating an invalid bearer value cannot bypass general admission control. The built-in limiter is explicitly a single-process layer; public multi-replica deployment still requires a shared edge or distributed limiter.
+- Added migration 015 and terminal dead-letter state for workflow dispatch commands. Exhausted commands stop retrying, store only the error class, emit one durable `mission.dispatch_dead_lettered` event, and failed starts move the mission to a visible failed state without duplicating side effects.
+- Added inherited `opportunity-v3`, expanding the deterministic evaluation suite from 15 to 40 unique cases across exact and weak evidence, weighted scoring, prompt injection, graduation, experience, authorization, internship dates, ambiguity, and missing role location.
+- Evaluation runs now record P50 and P95 matcher latency. The Evaluation Lab defaults to v3 and preserves v1/v2 as comparable historical baselines.
+- Updated generated OpenAPI/TypeScript contracts, production environment controls, Compose wiring, architecture/threat/deployment documentation, and recruiter-facing descriptions.
+- Backed up the ignored local SQLite database and applied migration 015; the current development database now exposes the dispatch dead-letter state.
+- Validation: 105 Python tests passed with one opt-in live Temporal test skipped; Ruff passed; four frontend tests, TypeScript, Prettier, and the Next.js production build passed; production Compose configuration resolved successfully.

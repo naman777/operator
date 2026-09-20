@@ -3441,6 +3441,30 @@
             "type": "number",
             "minimum": 0.0,
             "title": "Mean Latency Ms"
+          },
+          "p50_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50 Latency Ms"
+          },
+          "p95_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Latency Ms"
           }
         },
         "additionalProperties": false,
@@ -3467,10 +3491,11 @@
             "type": "string",
             "enum": [
               "opportunity-v1",
-              "opportunity-v2"
+              "opportunity-v2",
+              "opportunity-v3"
             ],
             "title": "Dataset Version",
-            "default": "opportunity-v2"
+            "default": "opportunity-v3"
           }
         },
         "additionalProperties": false,

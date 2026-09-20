@@ -30,7 +30,7 @@ Generated drafts are version 1 and are not sent or submitted. Revision editing, 
 
 ## Sessions and migrations
 
-Random bearer tokens are hashed at rest. Guest sessions expire after 24 hours; reset rotates the token in the same workspace. It is not a destructive workspace-data reset. Account authentication, rate limiting, and public-deployment hardening remain pending.
+Random bearer tokens are hashed at rest. Guest sessions expire after 24 hours; reset rotates the token in the same workspace. It is not a destructive workspace-data reset. The API applies configurable hashed-identity limits per process to general requests, guest-session issuance, and mission mutations. Account authentication, shared multi-replica limiting, and public-deployment hardening remain pending.
 
 Six ordered migrations define foundation tables, dispatch/checkpoint storage, pipeline/approvals, artifacts, workspace profiles/documents, and imported job snapshots. They run transactionally; PostgreSQL uses an advisory lock. Migration 003 inspects existing columns before adding them, avoiding transaction-aborting duplicate-column errors on bootstrapped databases. Migration 004 works with SQLite and PostgreSQL syntax; only SQLite runtime is currently verified.
 

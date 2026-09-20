@@ -344,7 +344,9 @@ class ImportReceipt(Contract):
 
 
 class EvalRunRequest(Contract):
-    dataset_version: Literal["opportunity-v1", "opportunity-v2"] = "opportunity-v2"
+    dataset_version: Literal["opportunity-v1", "opportunity-v2", "opportunity-v3"] = (
+        "opportunity-v3"
+    )
 
 
 class EvalMetrics(Contract):
@@ -356,6 +358,8 @@ class EvalMetrics(Contract):
     citation_coverage: float = Field(ge=0, le=1)
     unsupported_positive_rate: float = Field(ge=0, le=1)
     mean_latency_ms: float = Field(ge=0)
+    p50_latency_ms: float | None = Field(default=None, ge=0)
+    p95_latency_ms: float | None = Field(default=None, ge=0)
 
 
 class EvalCaseResult(Contract):

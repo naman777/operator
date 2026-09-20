@@ -11,13 +11,14 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from playwright.sync_api import Error as PlaywrightError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .logging_config import configure_logging
+from .rate_limits import Limit, SlidingWindowLimiter
 from .db import (
     APPLICATION_STAGES,
     Approval,
@@ -104,8 +105,20 @@ async def _get_temporal_client():
     return _TEMPORAL_CLIENT
 
 
-def create_app(database_url=None):
+def create_app(database_url=None, limit_overrides: dict[str, int] | None = None):
     engine, sessions = database(database_url)
+    configured_limits = {
+        "api": int(os.getenv("OPERATOR_API_REQUESTS_PER_MINUTE", "240")),
+        "guest": int(os.getenv("OPERATOR_GUEST_SESSIONS_PER_HOUR", "20")),
+        "mission": int(os.getenv("OPERATOR_MISSION_MUTATIONS_PER_MINUTE", "20")),
+    }
+    configured_limits.update(limit_overrides or {})
+    if any(value < 1 for value in configured_limits.values()):
+        raise ValueError("Rate limits must be positive integers")
+    limiter = SlidingWindowLimiter()
+    api_limit = Limit("api", configured_limits["api"], 60)
+    guest_limit = Limit("guest", configured_limits["guest"], 3600)
+    mission_limit = Limit("mission", configured_limits["mission"], 60)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -121,8 +134,45 @@ def create_app(database_url=None):
     async def request_context(request: Request, call_next):
         request_id = str(uuid4())
         start = time.perf_counter()
+        rate_headers = {}
+        if request.url.path.startswith("/v1/"):
+            authorization = request.headers.get("authorization", "")
+            network_identity = request.client.host if request.client else "unknown"
+            network_key = hashlib.sha256(network_identity.encode()).hexdigest()
+            workspace_identity = (
+                authorization[7:] if authorization.startswith("Bearer ") else network_identity
+            )
+            workspace_key = hashlib.sha256(workspace_identity.encode()).hexdigest()
+            limits = [(api_limit, network_key)]
+            if request.method == "POST" and request.url.path == "/v1/guest-sessions":
+                limits.append((guest_limit, network_key))
+            if request.method == "POST" and (
+                request.url.path == "/v1/missions"
+                or request.url.path.startswith("/v1/missions/")
+            ):
+                limits.append((mission_limit, workspace_key))
+            for limit, key in limits:
+                allowed, remaining, retry_after = limiter.check(key, limit)
+                rate_headers = {
+                    "X-RateLimit-Limit": str(limit.requests),
+                    "X-RateLimit-Remaining": str(remaining),
+                }
+                if not allowed:
+                    response = JSONResponse(
+                        {"detail": "Rate limit exceeded. Retry later."},
+                        status_code=429,
+                        headers={**rate_headers, "Retry-After": str(retry_after)},
+                    )
+                    response.headers["X-Request-ID"] = request_id
+                    logger.warning(
+                        "rate_limit_exceeded",
+                        extra={"request_id": request_id, "method": request.method, "limit": limit.name},
+                    )
+                    return response
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
+        for name, value in rate_headers.items():
+            response.headers[name] = value
         logger.info(
             "request",
             extra={

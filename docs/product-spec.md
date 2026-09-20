@@ -11,7 +11,7 @@
 - Run Inspector: mission status, pending step map, recorded events, budget and usage empty states.
 - Opportunity Detail: sample cards with requirements and source excerpts; application history is pending.
 - Approval Inbox: durable Temporal wait with approve/reject controls and a 24-hour expiry.
-- Evaluation Lab: no fabricated results; awaiting evaluation execution.
+- Evaluation Lab: persisted deterministic 40-case runs with accuracy, eligibility, citation, unsupported-claim, score-error, and P50/P95 matcher-latency metrics.
 
 ## Contracts and state
 Pydantic models are authoritative. `pnpm contracts` exports JSON Schema v1 and OpenAPI, then generates TypeScript declarations. Clients may not supply workspace IDs or mission status.

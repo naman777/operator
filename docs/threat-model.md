@@ -2,7 +2,7 @@
 
 Implemented: cryptographically random guest credentials, hashed credentials at rest, workspace-scoped reads/writes, strict input schemas, transactional audit event, idempotency uniqueness, and no external network tools. Job URLs are saved as data only, never fetched by this increment. Request logs exclude bearer credentials and bodies.
 
-Before any public deployment: account session management, Auth.js integration, request/mission rate limits, retention/reset, HTTPS, CSP, explicit CORS policy if origins split, and dependency scanning.
+Before any public deployment: account session management, Auth.js integration, shared edge/distributed request limits, retention/reset, HTTPS, CSP, explicit CORS policy if origins split, and dependency scanning. Configurable per-process API, guest-session, and mission-mutation limits are implemented as a local safety layer.
 
 Before extraction: reject credentials and non-HTTP protocols in URLs, resolve and deny private/link-local IPs at every redirect and browser subrequest, protect against DNS rebinding, cap bytes/time, and isolate the browser network. Pydantic HttpUrl validation alone is not an SSRF defense.
 

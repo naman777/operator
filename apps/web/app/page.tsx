@@ -255,7 +255,7 @@ export default function Home() {
     try {
       const run = await api<EvalRun>("/v1/evals/runs", token, {
         method: "POST",
-        body: JSON.stringify({ dataset_version: "opportunity-v2" }),
+        body: JSON.stringify({ dataset_version: "opportunity-v3" }),
       });
       setEvalRuns((current) => [run, ...current]);
     } catch (e) {
@@ -908,17 +908,17 @@ export default function Home() {
                   onClick={runEvaluation}
                   disabled={evalBusy}
                 >
-                  {evalBusy ? "Running…" : "Run opportunity-v2"}
+                  {evalBusy ? "Running…" : "Run opportunity-v3"}
                 </button>
               </div>
               {evalRuns.length === 0 ? (
                 <section className="panel empty">
                   <h2>No measured runs yet</h2>
                   <p>
-                    Run the fifteen-case suite to record reproducible matching,
+                    Run the forty-case suite to record reproducible matching,
                     eligibility, safety, provenance, and latency metrics.
                   </p>
-                  <span className="tag">DATASET opportunity-v2</span>
+                  <span className="tag">DATASET opportunity-v3</span>
                 </section>
               ) : (
                 <div className="eval-runs">
@@ -972,9 +972,12 @@ export default function Home() {
                           </strong>
                         </div>
                         <div>
-                          <small>MEAN LATENCY</small>
+                          <small>P50 / P95 LATENCY</small>
                           <strong>
-                            {run.metrics.mean_latency_ms.toFixed(2)} ms
+                            {run.metrics.p50_latency_ms == null ||
+                            run.metrics.p95_latency_ms == null
+                              ? `${run.metrics.mean_latency_ms.toFixed(2)} ms mean`
+                              : `${run.metrics.p50_latency_ms.toFixed(2)} / ${run.metrics.p95_latency_ms.toFixed(2)} ms`}
                           </strong>
                         </div>
                       </div>

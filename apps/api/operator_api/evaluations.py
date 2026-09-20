@@ -1,6 +1,7 @@
 """Deterministic, versioned regression evaluation for opportunity matching."""
 
 import json
+import math
 import time
 from pathlib import Path
 
@@ -8,15 +9,25 @@ from operator_worker.analysis import match, verify
 
 from .schemas import CandidateProfile, JobPosting
 
-EVALUATOR_VERSION = "deterministic-v2"
-DATASET_VERSION = "opportunity-v2"
-DATASET_VERSIONS = {"opportunity-v1", DATASET_VERSION}
+EVALUATOR_VERSION = "deterministic-v3"
+DATASET_VERSION = "opportunity-v3"
+DATASET_VERSIONS = {"opportunity-v1", "opportunity-v2", DATASET_VERSION}
 
 
 def load_dataset(root: Path, version: str = DATASET_VERSION) -> dict:
     if version not in DATASET_VERSIONS:
         raise ValueError(f"Unknown evaluation dataset: {version}")
-    return json.loads((root / "evals" / "datasets" / f"{version}.json").read_text(encoding="utf-8"))
+    dataset = json.loads(
+        (root / "evals" / "datasets" / f"{version}.json").read_text(encoding="utf-8")
+    )
+    parent_version = dataset.get("extends")
+    if parent_version:
+        parent = load_dataset(root, parent_version)
+        cases = [*parent["cases"], *dataset["cases"]]
+        if len({case["id"] for case in cases}) != len(cases):
+            raise ValueError("Evaluation case ids must be unique across inherited datasets")
+        dataset = {**parent, **dataset, "cases": cases}
+    return dataset
 
 
 def _merged(base: dict, overrides: dict | None) -> dict:
@@ -92,6 +103,11 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
         total_latency += latency_ms
 
     count = len(results)
+    latencies = sorted(item["latency_ms"] for item in results)
+
+    def percentile(value: float) -> float:
+        return latencies[max(0, math.ceil(value * count) - 1)]
+
     metrics = {
         "case_count": count,
         "pass_rate": sum(1 for item in results if item["passed"]) / count,
@@ -105,6 +121,8 @@ def run(root: Path, version: str = DATASET_VERSION) -> tuple[dict, list[dict]]:
             unsupported_positives / supported_requirements if supported_requirements else 0.0
         ),
         "mean_latency_ms": round(total_latency / count, 3),
+        "p50_latency_ms": percentile(0.50),
+        "p95_latency_ms": percentile(0.95),
     }
     return metrics, results
 
@@ -116,7 +134,12 @@ def compare(baseline: dict, candidate: dict) -> dict:
         for key in ("pass_rate", "eligibility_accuracy")
         if baseline.get(key) is not None and candidate.get(key) is not None
     )
-    lower_is_better = ("score_mae", "unsupported_positive_rate", "mean_latency_ms")
+    lower_is_better = ["score_mae", "unsupported_positive_rate", "mean_latency_ms"]
+    lower_is_better.extend(
+        key
+        for key in ("p50_latency_ms", "p95_latency_ms")
+        if baseline.get(key) is not None and candidate.get(key) is not None
+    )
     deltas = {
         key: candidate[key] - baseline[key]
         for key in (*higher_is_better, *lower_is_better)

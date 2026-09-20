@@ -1,6 +1,6 @@
 # Deployment runbook
 
-This runbook describes the production-shaped Compose configuration. It does not make the current guest-only build safe for unrestricted public traffic. Put authentication, rate limiting, TLS, and network controls in front of it before exposing it beyond a controlled demo.
+This runbook describes the production-shaped Compose configuration. It does not make the current guest-only build safe for unrestricted public traffic. Put authentication, shared edge rate limiting, TLS, and network controls in front of it before exposing it beyond a controlled demo. The built-in limiter protects one API process and intentionally does not claim multi-replica coordination.
 
 ## Required platform services
 
@@ -72,6 +72,7 @@ Application rollback uses the preceding immutable API and web tags. Do not autom
 - Model enrichment already falls back to deterministic parsing, matching, and templates. Keep `OPERATOR_MODEL_ENABLED=0` when credentials, pricing, or provider health are uncertain.
 - A Temporal outage prevents new workflow progress but leaves accepted dispatch commands and stored checkpoints intact. Restore Temporal before replaying queued work.
 - A database outage makes `/health/ready` fail, removing API and worker instances from service. `/health/live` remains available for process diagnosis.
+- Dispatch commands retry with bounded exponential backoff. After `OPERATOR_DISPATCH_MAX_ATTEMPTS`, the command is dead-lettered once, its sanitized error category is recorded as a mission event, and an exhausted start marks the mission failed for explicit operator review.
 - Real email and calendar providers are not connected; existing connector actions remain local mock records.
 
 ## Alerts to configure
@@ -83,4 +84,4 @@ Application rollback uses the preceding immutable API and web tags. Do not autom
 - Mission failure rate, model cost, approval age, and P95 workflow latency.
 - TLS certificate expiry and reverse-proxy error rate.
 
-Public deployment remains blocked on production authentication, API rate limiting, real secret management, restore verification, and end-to-end staging validation.
+Public deployment remains blocked on production authentication, shared multi-replica rate limiting, real secret management, restore verification, and end-to-end staging validation.

@@ -1137,6 +1137,10 @@ export interface components {
             unsupported_positive_rate: number;
             /** Mean Latency Ms */
             mean_latency_ms: number;
+            /** P50 Latency Ms */
+            p50_latency_ms?: number | null;
+            /** P95 Latency Ms */
+            p95_latency_ms?: number | null;
         };
         /** EvalRunRequest */
         EvalRunRequest: {
@@ -1148,10 +1152,10 @@ export interface components {
             schema_version: "1.0";
             /**
              * Dataset Version
-             * @default opportunity-v2
+             * @default opportunity-v3
              * @enum {string}
              */
-            dataset_version: "opportunity-v1" | "opportunity-v2";
+            dataset_version: "opportunity-v1" | "opportunity-v2" | "opportunity-v3";
         };
         /** EvalRunView */
         EvalRunView: {
