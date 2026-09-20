@@ -74,6 +74,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [accountSession, setAccountSession] = useState(false);
 
   async function api<T>(
     path: string,
@@ -121,6 +124,7 @@ export default function Home() {
   }
   useEffect(() => {
     const saved = localStorage.getItem("operator-session");
+    setAccountSession(localStorage.getItem("operator-account") === "true");
     if (saved) {
       setToken(saved);
       load(saved)
@@ -180,6 +184,27 @@ export default function Home() {
   async function inspect(mission: Mission) {
     setError("");
     setSelected(mission);
+  }
+  async function authenticate(action: "login" | "register") {
+    setBusy(true);
+    setError("");
+    try {
+      const data = await api<components["schemas"]["AccountSessionView"]>(
+        `/v1/accounts/${action}`,
+        action === "register" ? token : "",
+        { method: "POST", body: JSON.stringify({ email, password }) },
+      );
+      localStorage.setItem("operator-session", data.token);
+      localStorage.setItem("operator-account", "true");
+      setToken(data.token);
+      setAccountSession(true);
+      setPassword("");
+      await load(data.token);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -384,6 +409,34 @@ export default function Home() {
               <button className="primary" disabled={busy} onClick={enter}>
                 {busy ? "Opening…" : "Start guided demo →"}
               </button>
+              <form
+                className="account-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  authenticate("login");
+                }}
+              >
+                <label htmlFor="login-email">Return to your workspace</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+                <input
+                  type="password"
+                  required
+                  minLength={12}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                />
+                <button className="secondary" disabled={busy}>
+                  Sign in
+                </button>
+              </form>
             </div>
           ) : selected ? (
             <RunInspector
@@ -397,6 +450,36 @@ export default function Home() {
             />
           ) : screen === "Mission Control" ? (
             <>
+              {!accountSession && (
+                <section className="panel account-form">
+                  <h2>Keep this workspace</h2>
+                  <p className="muted">
+                    Claim this guest workspace and return to its missions later.
+                  </p>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                  <input
+                    type="password"
+                    required
+                    minLength={12}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 12 characters"
+                  />
+                  <button
+                    className="secondary"
+                    disabled={busy || !email || password.length < 12}
+                    onClick={() => authenticate("register")}
+                  >
+                    Create account and claim workspace
+                  </button>
+                </section>
+              )}
               <div className="stats">
                 <div>
                   <small>SAVED MISSIONS</small>
