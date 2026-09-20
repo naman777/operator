@@ -37,7 +37,7 @@ Updated: 2026-09-20
 - Backed up the ignored local SQLite database and applied migration 014. The current database had no eligible stored-document chunks to backfill; future ingestion is indexed immediately.
 
 ## Current milestone
-The local portfolio release now includes guarded browser extraction, source-backed model parsing and drafting, pgvector retrieval, a 40-case deterministic evaluation suite, per-process API admission controls, durable dispatch dead letters, and workspace-scoped operational telemetry. Cloud deployment is intentionally deferred. The next non-deployment work is production account identity/session management and optional external trace export.
+The local portfolio release now includes guarded browser extraction, source-backed model parsing and drafting, pgvector retrieval, a 40-case deterministic evaluation suite, per-process API admission controls, durable dispatch dead letters, and workspace-scoped operational telemetry. The GCE production deployment is prepared locally. Remote preflight is pending valid VM SSH authorization; optional external trace export remains future work.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -89,7 +89,7 @@ Phase 4 is in progress (plain-text ingestion and static public snapshots complet
 5. Extend the implemented cited template drafts with controlled model drafting and immutable revisions.
 6. Add artifact revision/diff view; citation viewer is implemented.
 
-Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, and complete local-stack validation.
+Remaining foundation tasks: optional external trace export and complete deployed-stack validation.
 
 ## First-sprint backlog mapping
 | Plan ticket | Status |
@@ -122,7 +122,7 @@ Remaining foundation tasks: Auth.js account sessions, Langfuse tracing wiring, a
 ## Blockers and limitations
 - Docker CLI is installed, but its configured daemon at 127.0.0.1:8888 is unreachable; full container startup and PostgreSQL runtime integration remain unverified. Native Temporal integration is verified.
 - Browser automation reported no available browser; visual rendering and click-through testing remain unverified. HTTP smoke tests are not a substitute for browser E2E tests.
-- Guest credentials expire after 24 h; this build is local-only and must not be deployed publicly.
+- Guest credentials expire after 24 h; persistent account sessions are available, and the public rollout remains gated on VM preflight and production health validation.
 - Arbitrary job URLs are saved only; no real page fetches, model calls, or external actions in this build.
 
 ## Local handoff
@@ -374,3 +374,16 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Added migration 016 for accounts, account sessions, and optional workspace ownership, plus repeatability, credential validation, token invalidation, restoration, revocation, and isolation coverage.
 - This is a self-contained account foundation; email verification, password recovery, OAuth providers, and the account-facing web forms remain future product choices.
 - Validation: 108 Python tests passed with one opt-in live Temporal test skipped; Ruff and TypeScript checks passed; generated OpenAPI and TypeScript contracts include the account/session endpoints.
+
+## Foundation continuation: account entry UI
+- Added login and registration forms for the persistent account/session APIs. Registration claims the active guest workspace, and login restores an existing account workspace.
+- Frontend formatting and TypeScript checks pass.
+
+## Phase 8 continuation: GCE production deployment preparation
+- Added a GCE-specific production stack using the production Temporal server image with separate persistent PostgreSQL history and visibility databases. The Aiven pgvector application database remains external and requires TLS.
+- Added private backend and edge Docker networks. Only Caddy publishes ports 80/443; Temporal, both PostgreSQL roles, API, worker, and web have no host mappings.
+- Added health checks, restart policies, process limits, and memory/CPU limits sized for the 2-vCPU, 8-GB VM.
+- Added a staged rollout script that validates configuration, backs up existing Temporal persistence, initializes Temporal schemas and namespace, runs application migrations, and verifies internal service health before optionally starting Caddy.
+- Updated GitHub Actions to validate the GCE manifest, publish immutable images, authenticate to GHCR with the job token, deploy over pinned SSH, and keep public exposure behind a separate PRODUCTION_PUBLIC_ENABLED variable.
+- Local validation: Compose configuration parsed successfully; only 80/443 are published; shell syntax, git whitespace, frontend formatting, and TypeScript checks passed.
+- Remote preflight and deployment remain pending because the VM rejected the supplied ED25519 key for nkundra_be23. No VM files, services, firewall rules, IAM settings, DNS, volumes, databases, or public endpoints were changed.

@@ -1,0 +1,265 @@
+name: operator-production
+
+x-app-environment: &app-environment
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+  TEMPORAL_ADDRESS: temporal:7233
+  OPERATOR_MODEL_ENABLED: ${OPERATOR_MODEL_ENABLED:-0}
+  OPERATOR_MODEL: ${OPERATOR_MODEL:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPERATOR_MODEL_BUDGET_RESERVE_USD: ${OPERATOR_MODEL_BUDGET_RESERVE_USD:-0.10}
+  OPERATOR_MODEL_INPUT_USD_PER_MILLION: ${OPERATOR_MODEL_INPUT_USD_PER_MILLION:-0}
+  OPERATOR_MODEL_OUTPUT_USD_PER_MILLION: ${OPERATOR_MODEL_OUTPUT_USD_PER_MILLION:-0}
+
+x-app-security: &app-security
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp
+
+services:
+  temporal-postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER:-temporal}
+      POSTGRES_PASSWORD: ${TEMPORAL_POSTGRES_PASSWORD:?set TEMPORAL_POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    shm_size: 128mb
+    cpus: 0.40
+    mem_limit: 768m
+    mem_reservation: 256m
+    pids_limit: 200
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  temporal-schema:
+    image: temporalio/admin-tools:1.32.0
+    entrypoint: ["/bin/sh"]
+    command: ["/scripts/setup-postgres.sh"]
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: temporal-postgres
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER:-temporal}
+      POSTGRES_PWD: ${TEMPORAL_POSTGRES_PASSWORD:?set TEMPORAL_POSTGRES_PASSWORD}
+      SQL_PASSWORD: ${TEMPORAL_POSTGRES_PASSWORD:?set TEMPORAL_POSTGRES_PASSWORD}
+    volumes:
+      - ./infra/temporal/setup-postgres.sh:/scripts/setup-postgres.sh:ro
+    networks:
+      - backend
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.30
+    mem_limit: 384m
+    pids_limit: 100
+
+  temporal:
+    image: temporalio/server:1.32.0
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: temporal-postgres
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER:-temporal}
+      POSTGRES_PWD: ${TEMPORAL_POSTGRES_PASSWORD:?set TEMPORAL_POSTGRES_PASSWORD}
+      BIND_ON_IP: 0.0.0.0
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/production-sql.yaml
+      NUM_HISTORY_SHARDS: ${TEMPORAL_NUM_HISTORY_SHARDS:-128}
+      LOG_LEVEL: ${TEMPORAL_LOG_LEVEL:-info}
+    volumes:
+      - ./infra/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    networks:
+      - backend
+    depends_on:
+      temporal-schema:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.75
+    mem_limit: 1536m
+    mem_reservation: 512m
+    pids_limit: 400
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  temporal-namespace:
+    image: temporalio/admin-tools:1.32.0
+    entrypoint: ["/bin/sh"]
+    command: ["/scripts/create-namespace.sh"]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
+      TEMPORAL_NAMESPACE_RETENTION: ${TEMPORAL_NAMESPACE_RETENTION:-7d}
+    volumes:
+      - ./infra/temporal/create-namespace.sh:/scripts/create-namespace.sh:ro
+    networks:
+      - backend
+    depends_on:
+      temporal:
+        condition: service_healthy
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.20
+    mem_limit: 256m
+    pids_limit: 100
+
+  migrate:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["python", "scripts/migrate.py"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    networks:
+      - backend
+    restart: "no"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.50
+    mem_limit: 768m
+    pids_limit: 200
+
+  api:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["uvicorn", "operator_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    environment:
+      <<: *app-environment
+      OPERATOR_API_REQUESTS_PER_MINUTE: ${OPERATOR_API_REQUESTS_PER_MINUTE:-240}
+      OPERATOR_GUEST_SESSIONS_PER_HOUR: ${OPERATOR_GUEST_SESSIONS_PER_HOUR:-20}
+      OPERATOR_MISSION_MUTATIONS_PER_MINUTE: ${OPERATOR_MISSION_MUTATIONS_PER_MINUTE:-20}
+    networks:
+      - backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      temporal-namespace:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    <<: *app-security
+    shm_size: 512mb
+    cpus: 0.90
+    mem_limit: 1792m
+    mem_reservation: 512m
+    pids_limit: 400
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  workflow-worker:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["python", "-m", "operator_worker.main"]
+    environment:
+      <<: *app-environment
+      OPERATOR_DISPATCH_MAX_ATTEMPTS: ${OPERATOR_DISPATCH_MAX_ATTEMPTS:-8}
+    networks:
+      - backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      temporal-namespace:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *app-security
+    cpus: 0.65
+    mem_limit: 1280m
+    mem_reservation: 384m
+    pids_limit: 300
+    healthcheck:
+      test: ["CMD", "python", "-c", "import asyncio; from temporalio.client import Client; asyncio.run(Client.connect('temporal:7233'))"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  web:
+    image: ${OPERATOR_WEB_IMAGE:?set OPERATOR_WEB_IMAGE}
+    environment:
+      API_URL: http://api:8000
+    networks:
+      - backend
+      - edge
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.40
+    mem_limit: 640m
+    mem_reservation: 192m
+    pids_limit: 200
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    environment:
+      OPERATOR_DOMAIN: ${OPERATOR_DOMAIN:?set OPERATOR_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cpus: 0.20
+    mem_limit: 256m
+    mem_reservation: 64m
+    pids_limit: 100
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  backend:
+    name: operator-backend
+    driver: bridge
+  edge:
+    name: operator-edge
+    driver: bridge
+
+volumes:
+  temporal-postgres-data:
+  caddy-data:
+  caddy-config:

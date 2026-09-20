@@ -12,3 +12,6 @@ __pycache__/
 
 .local/
 *.egg-info/
+
+/keys
+.env.production
