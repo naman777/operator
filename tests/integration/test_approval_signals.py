@@ -87,3 +87,21 @@ def test_approval_endpoint_persists_before_signaling_temporal(
         assert calls == [("approval_resolved", signal_value)]
 
     engine.dispose()
+
+
+def test_temporal_client_connect_uses_supported_sdk_arguments(monkeypatch):
+    sentinel = object()
+    calls = []
+
+    async def connect(target):
+        calls.append(target)
+        return sentinel
+
+    from temporalio.client import Client
+
+    monkeypatch.setenv("TEMPORAL_ADDRESS", "temporal:7233")
+    monkeypatch.setattr(Client, "connect", staticmethod(connect))
+    monkeypatch.setattr(main_module, "_TEMPORAL_CLIENT", None)
+
+    assert asyncio.run(main_module._get_temporal_client()) is sentinel
+    assert calls == ["temporal:7233"]

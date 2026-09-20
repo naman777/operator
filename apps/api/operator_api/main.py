@@ -1,3 +1,4 @@
+import asyncio
 import http.client
 import hashlib
 import logging
@@ -102,10 +103,9 @@ async def _get_temporal_client():
         return _TEMPORAL_CLIENT
     try:
         from temporalio.client import Client
-        from datetime import timedelta as _td
-        _TEMPORAL_CLIENT = await Client.connect(
-            os.getenv("TEMPORAL_ADDRESS", "127.0.0.1:7233"),
-            rpc_timeout=_td(seconds=2),
+        _TEMPORAL_CLIENT = await asyncio.wait_for(
+            Client.connect(os.getenv("TEMPORAL_ADDRESS", "127.0.0.1:7233")),
+            timeout=2,
         )
     except Exception as exc:
         logger.warning("Temporal unavailable; approval signals will be skipped: %s", type(exc).__name__)
