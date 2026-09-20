@@ -37,7 +37,7 @@ Updated: 2026-09-20
 - Backed up the ignored local SQLite database and applied migration 014. The current database had no eligible stored-document chunks to backfill; future ingestion is indexed immediately.
 
 ## Current milestone
-The local portfolio release now includes guarded browser extraction, source-backed model parsing and drafting, pgvector retrieval, a 40-case deterministic evaluation suite, per-process API admission controls, and durable dispatch dead letters. Next release blockers are account authentication, shared multi-replica rate enforcement, managed secret integration, and a verified staging restore/deployment.
+The local portfolio release now includes guarded browser extraction, source-backed model parsing and drafting, pgvector retrieval, a 40-case deterministic evaluation suite, per-process API admission controls, durable dispatch dead letters, and workspace-scoped operational telemetry. Cloud deployment is intentionally deferred. The next non-deployment work is production account identity/session management and optional external trace export.
 
 ## Completed
 - Read the full blueprint and inspected the initially empty repository.
@@ -355,3 +355,14 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Updated generated OpenAPI/TypeScript contracts, production environment controls, Compose wiring, architecture/threat/deployment documentation, and recruiter-facing descriptions.
 - Backed up the ignored local SQLite database and applied migration 015; the current development database now exposes the dispatch dead-letter state.
 - Validation: 105 Python tests passed with one opt-in live Temporal test skipped; Ruff passed; four frontend tests, TypeScript, Prettier, and the Next.js production build passed; production Compose configuration resolved successfully.
+
+## Phase 7 continuation: operational metrics
+- Added `GET /v1/observability/summary`, computed only from durable workspace-scoped records. It reports terminal mission success, active/failed/cancelled counts, total model cost, cost per completed mission, workflow-step success and P50/P95 latency, model/connector success, and eight weekly mission cohorts.
+- Added an Operations dashboard with metric cards, step reliability, tool/connector outcomes, and the eight-week trend. Empty workspaces and workspaces without model calls remain valid and show explicit empty states.
+- The metric implementation performs no external tracing calls and exposes no prompts, source text, tokens, bearer credentials, or cross-workspace records.
+- Generated OpenAPI and TypeScript contracts were updated. Validation includes populated and empty workspace isolation coverage.
+- Validation: 106 Python tests passed with one opt-in live Temporal test skipped; Ruff passed; four frontend tests, TypeScript, Prettier, and the Next.js production build passed.
+
+## Phase 8 continuation: architecture decisions
+- Added five architecture decision records covering durable Temporal missions, deterministic authority with guarded model enrichment, immutable evidence provenance, guarded public extraction, and workspace/approval boundaries.
+- Added an ADR index so reviewers can assess the project's central tradeoffs and consequences independently of its implementation history.

@@ -2,7 +2,7 @@
 
 A personal work execution agent, starting with evidence-backed opportunity analysis.
 
-**Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, and measured regression evaluation.** Open a guest workspace, follow the three-step guided demo, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, and run the versioned evaluation dataset. The in-product Project Guide explains the architecture, safeguards, and current deployment limitations.
+**Current build: durable opportunity analysis with profile evidence, public job snapshots, human approval, mock connector actions, MCP access, measured regression evaluation, and operational telemetry.** Open a guest workspace, follow the three-step guided demo, correct your profile, ingest text/PDF/DOCX resume evidence, import a supported HTTPS JobPosting page, inspect live analysis and cited application drafts, approve or edit proposed actions, revise artifacts, run the versioned evaluation dataset, and inspect workspace success/cost/reliability metrics. The in-product Project Guide explains the architecture, safeguards, and current deployment limitations.
 
 Matching and drafts use deterministic rules/templates by default. An optional guarded Agents SDK path can extract source-backed requirements, review explanations, and produce cited drafts while deterministic eligibility, scores, and evidence mappings remain authoritative. Resume ingestion appends evidence, persists provenance-preserving feature-hash embeddings, and applies bounded heuristic parsing while preserving user corrections. Public extraction supports a single JSON-LD JobPosting, prefers guarded static HTTPS retrieval, and falls back to same-origin Playwright rendering with a stored screenshot. When the posting identifies an official company HTTPS URL, a separate checkpoint collects exact description claims and carries their citations into the report and artifacts. Real provider connectors and model-provider evaluations remain pending. The evaluation lab retains the earlier baselines and defaults to a forty-case suite covering matching, weak and partial evidence, weighted scoring, prompt-injection text, eligibility, ambiguity, missing location, and incomplete extraction, with P50/P95 matcher latency. See [PROGRESS.md](PROGRESS.md).
 
@@ -119,6 +119,6 @@ With all four services running, execute `python scripts/smoke_workflow.py` to te
 - `data/demo`: synthetic candidate and three job snapshots.
 - `infra/migrations`: versioned schema upgrades.
 - `tests`: authorization, idempotency, migrations, provenance, and live workflow recovery.
-- `docs`: architecture, threat model, and demo instructions.
+- `docs`: architecture, threat model, demo instructions, and five indexed [architecture decisions](docs/adr/README.md).
 
 No model keys are needed. Import a supported job page in Opportunities before executing its mission. Unsupported pages fail explicitly. No external actions are performed. Public deployment requires account authentication, shared multi-replica rate enforcement, durable approval enforcement, and the remaining security work in the plan.

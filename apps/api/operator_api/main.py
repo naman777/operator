@@ -67,6 +67,7 @@ from .schemas import (
     ApprovalProposalUpdate,
     ExternalActionView,
     ModelCallView,
+    ObservabilitySummary,
 )
 
 from . import (
@@ -78,6 +79,7 @@ from . import (
     evaluations,
     connectors,
     browser_renderer,
+    observability,
 )
 
 configure_logging()
@@ -847,6 +849,10 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
             raise HTTPException(404, "Evaluation run not found")
         result = evaluations.compare(by_id[baseline].metrics, by_id[candidate].metrics)
         return {"baseline_id": baseline, "candidate_id": candidate, **result}
+
+    @app.get("/v1/observability/summary", response_model=ObservabilitySummary)
+    def observability_summary(db: DB, ws: WS):
+        return observability.summary(db, ws.id)
 
     @app.get("/v1/opportunities/imports", response_model=list[ImportReceipt])
     def imports(db: DB, ws: WS):

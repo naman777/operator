@@ -12,6 +12,7 @@
 - Opportunity Detail: sample cards with requirements and source excerpts; application history is pending.
 - Approval Inbox: durable Temporal wait with approve/reject controls and a 24-hour expiry.
 - Evaluation Lab: persisted deterministic 40-case runs with accuracy, eligibility, citation, unsupported-claim, score-error, and P50/P95 matcher-latency metrics.
+- Operations: workspace-scoped mission outcomes, cost per completed mission, step and tool success, latency percentiles, and eight-week mission cohorts from persisted records.
 
 ## Contracts and state
 Pydantic models are authoritative. `pnpm contracts` exports JSON Schema v1 and OpenAPI, then generates TypeScript declarations. Clients may not supply workspace IDs or mission status.

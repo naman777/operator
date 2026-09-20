@@ -11,6 +11,7 @@ type Profile = components["schemas"]["CandidateProfile"];
 type Application = components["schemas"]["ApplicationView"];
 type Approval = components["schemas"]["ApprovalView"];
 type EvalRun = components["schemas"]["EvalRunView"];
+type Observability = components["schemas"]["ObservabilitySummary"];
 type Screen =
   | "Mission Control"
   | "Opportunities"
@@ -18,6 +19,7 @@ type Screen =
   | "Application Pipeline"
   | "Approval Inbox"
   | "Evaluation Lab"
+  | "Operations"
   | "Project Guide";
 const screens: Screen[] = [
   "Mission Control",
@@ -26,6 +28,7 @@ const screens: Screen[] = [
   "Application Pipeline",
   "Approval Inbox",
   "Evaluation Lab",
+  "Operations",
   "Project Guide",
 ];
 const screenIcons = ["▦", "◇", "◎", "▤", "▣", "⌁", "i"];
@@ -57,6 +60,9 @@ export default function Home() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
+  const [observability, setObservability] = useState<Observability | null>(
+    null,
+  );
   const [evalBusy, setEvalBusy] = useState(false);
   const [editingApproval, setEditingApproval] = useState("");
   const [proposalDraft, setProposalDraft] = useState("");
@@ -96,13 +102,14 @@ export default function Home() {
     return response.json();
   }
   async function load(session: string) {
-    const [m, j, p, apps, apv, evals] = await Promise.all([
+    const [m, j, p, apps, apv, evals, operations] = await Promise.all([
       api<Mission[]>("/v1/missions", session),
       api<Job[]>("/v1/demo/jobs", session),
       api<Profile>("/v1/profile", session),
       api<Application[]>("/v1/applications", session),
       api<Approval[]>("/v1/approvals", session),
       api<EvalRun[]>("/v1/evals/runs", session),
+      api<Observability>("/v1/observability/summary", session),
     ]);
     setMissions(m);
     setJobs(j);
@@ -110,6 +117,7 @@ export default function Home() {
     setApplications(apps);
     setApprovals(apv);
     setEvalRuns(evals);
+    setObservability(operations);
   }
   useEffect(() => {
     const saved = localStorage.getItem("operator-session");
@@ -293,7 +301,7 @@ export default function Home() {
                 setSelected(null);
               }}
             >
-              <span className="nav-icon">{screenIcons[i]}</span>
+              <span className="nav-icon">{screenIcons[i] || "i"}</span>
               {s}
               {s === "Approval Inbox" && pendingApprovals > 0 && (
                 <span className="nav-badge">{pendingApprovals}</span>
@@ -773,6 +781,121 @@ export default function Home() {
                     </section>
                   ))}
                 </div>
+              )}
+            </>
+          ) : screen === "Operations" ? (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">DURABLE WORKFLOW TELEMETRY</p>
+                  <h1>Operations</h1>
+                  <p className="muted">
+                    Workspace-scoped outcomes, costs, step reliability, and
+                    eight-week mission cohorts from persisted records.
+                  </p>
+                </div>
+                <button
+                  className="secondary"
+                  onClick={() => load(token).catch((e) => setError(e.message))}
+                >
+                  Refresh metrics
+                </button>
+              </div>
+              {!observability ? (
+                <section className="panel empty">Loading metrics…</section>
+              ) : (
+                <>
+                  <section className="panel">
+                    <div className="stats eval-stats">
+                      <div>
+                        <small>MISSIONS</small>
+                        <strong>{observability.mission_count}</strong>
+                        <span>{observability.active_count} active</span>
+                      </div>
+                      <div>
+                        <small>SUCCESS RATE</small>
+                        <strong>
+                          {observability.success_rate == null
+                            ? "—"
+                            : `${(observability.success_rate * 100).toFixed(0)}%`}
+                        </strong>
+                        <span>
+                          {observability.completed_count} completed /{" "}
+                          {observability.failed_count} failed
+                        </span>
+                      </div>
+                      <div>
+                        <small>MODEL COST</small>
+                        <strong>
+                          ${observability.total_model_cost_usd.toFixed(4)}
+                        </strong>
+                        <span>recorded provider usage</span>
+                      </div>
+                      <div>
+                        <small>COST / SUCCESS</small>
+                        <strong>
+                          {observability.cost_per_completed_mission_usd == null
+                            ? "—"
+                            : `$${observability.cost_per_completed_mission_usd.toFixed(4)}`}
+                        </strong>
+                        <span>per completed mission</span>
+                      </div>
+                    </div>
+                  </section>
+                  <div className="two-col" style={{ marginTop: 20 }}>
+                    <section className="panel">
+                      <h2>Workflow steps</h2>
+                      <div className="eval-cases">
+                        {observability.step_metrics.length === 0 ? (
+                          <p className="muted">
+                            No workflow steps recorded yet.
+                          </p>
+                        ) : (
+                          observability.step_metrics.map((item) => (
+                            <p key={item.name} className="muted">
+                              <strong>{item.name}</strong> · {item.completed}/
+                              {item.attempted} completed · success{" "}
+                              {item.success_rate == null
+                                ? "—"
+                                : `${(item.success_rate * 100).toFixed(0)}%`}
+                              {item.p95_latency_ms == null
+                                ? ""
+                                : ` · P50 ${item.p50_latency_ms?.toFixed(0)} ms / P95 ${item.p95_latency_ms.toFixed(0)} ms`}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                    <section className="panel">
+                      <h2>Tools and connectors</h2>
+                      <div className="eval-cases">
+                        {observability.tool_metrics.length === 0 ? (
+                          <p className="muted">No tool calls recorded yet.</p>
+                        ) : (
+                          observability.tool_metrics.map((item) => (
+                            <p key={item.name} className="muted">
+                              <strong>{item.name}</strong> · {item.succeeded}/
+                              {item.attempted} succeeded ·{" "}
+                              {(item.success_rate * 100).toFixed(0)}%
+                            </p>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                  <section className="panel">
+                    <h2>Eight-week mission trend</h2>
+                    <div className="eval-cases">
+                      {observability.weekly_trend.map((item) => (
+                        <p key={item.week_start} className="muted">
+                          <strong>{item.week_start}</strong> · {item.created}{" "}
+                          created · {item.completed} completed · {item.failed}{" "}
+                          failed · {item.cancelled} cancelled
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                </>
               )}
             </>
           ) : screen === "Project Guide" ? (

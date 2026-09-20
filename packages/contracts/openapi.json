@@ -2259,6 +2259,52 @@
         }
       }
     },
+    "/v1/observability/summary": {
+      "get": {
+        "summary": "Observability Summary",
+        "operationId": "observability_summary_v1_observability_summary_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilitySummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/opportunities/imports": {
       "get": {
         "summary": "Imports",
@@ -4160,6 +4206,112 @@
         ],
         "title": "ModelCallView"
       },
+      "ObservabilitySummary": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "mission_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Mission Count"
+          },
+          "completed_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Completed Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Failed Count"
+          },
+          "cancelled_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cancelled Count"
+          },
+          "active_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Active Count"
+          },
+          "success_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate"
+          },
+          "total_model_cost_usd": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Model Cost Usd"
+          },
+          "cost_per_completed_mission_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Completed Mission Usd"
+          },
+          "step_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/StepMetric"
+            },
+            "type": "array",
+            "title": "Step Metrics"
+          },
+          "tool_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ToolMetric"
+            },
+            "type": "array",
+            "title": "Tool Metrics"
+          },
+          "weekly_trend": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyMissionMetric"
+            },
+            "type": "array",
+            "title": "Weekly Trend"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "generated_at",
+          "mission_count",
+          "completed_count",
+          "failed_count",
+          "cancelled_count",
+          "active_count",
+          "total_model_cost_usd",
+          "step_metrics",
+          "tool_metrics",
+          "weekly_trend"
+        ],
+        "title": "ObservabilitySummary"
+      },
       "OpportunityImport": {
         "properties": {
           "schema_version": {
@@ -4495,6 +4647,81 @@
         ],
         "title": "StageUpdate"
       },
+      "StepMetric": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "attempted": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Attempted"
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Completed"
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Failed"
+          },
+          "success_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate"
+          },
+          "p50_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50 Latency Ms"
+          },
+          "p95_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Latency Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "attempted",
+          "completed",
+          "failed"
+        ],
+        "title": "StepMetric"
+      },
       "StepView": {
         "properties": {
           "schema_version": {
@@ -4595,6 +4822,45 @@
         ],
         "title": "StepView"
       },
+      "ToolMetric": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "attempted": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Attempted"
+          },
+          "succeeded": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Succeeded"
+          },
+          "success_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Success Rate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "attempted",
+          "succeeded",
+          "success_rate"
+        ],
+        "title": "ToolMetric"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4627,6 +4893,64 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WeeklyMissionMetric": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Created"
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Completed"
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Failed"
+          },
+          "cancelled": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cancelled"
+          },
+          "success_rate": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "week_start",
+          "created",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "WeeklyMissionMetric"
       },
       "WorkspaceView": {
         "properties": {

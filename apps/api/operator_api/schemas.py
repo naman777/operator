@@ -405,3 +405,44 @@ class ModelCallView(Contract):
     cost_usd: float = Field(ge=0)
     status: Literal["completed", "failed"]
     created_at: datetime
+
+
+class StepMetric(Contract):
+    name: str
+    attempted: int = Field(ge=0)
+    completed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    success_rate: float | None = Field(default=None, ge=0, le=1)
+    p50_latency_ms: float | None = Field(default=None, ge=0)
+    p95_latency_ms: float | None = Field(default=None, ge=0)
+
+
+class ToolMetric(Contract):
+    name: str
+    attempted: int = Field(ge=0)
+    succeeded: int = Field(ge=0)
+    success_rate: float = Field(ge=0, le=1)
+
+
+class WeeklyMissionMetric(Contract):
+    week_start: date
+    created: int = Field(ge=0)
+    completed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    cancelled: int = Field(ge=0)
+    success_rate: float | None = Field(default=None, ge=0, le=1)
+
+
+class ObservabilitySummary(Contract):
+    generated_at: datetime
+    mission_count: int = Field(ge=0)
+    completed_count: int = Field(ge=0)
+    failed_count: int = Field(ge=0)
+    cancelled_count: int = Field(ge=0)
+    active_count: int = Field(ge=0)
+    success_rate: float | None = Field(default=None, ge=0, le=1)
+    total_model_cost_usd: float = Field(ge=0)
+    cost_per_completed_mission_usd: float | None = Field(default=None, ge=0)
+    step_metrics: list[StepMetric]
+    tool_metrics: list[ToolMetric]
+    weekly_trend: list[WeeklyMissionMetric]

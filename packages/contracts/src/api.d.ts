@@ -663,6 +663,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/observability/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Observability Summary */
+        get: operations["observability_summary_v1_observability_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/opportunities/imports": {
         parameters: {
             query?: never;
@@ -1480,6 +1497,42 @@ export interface components {
              */
             created_at: string;
         };
+        /** ObservabilitySummary */
+        ObservabilitySummary: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Mission Count */
+            mission_count: number;
+            /** Completed Count */
+            completed_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Cancelled Count */
+            cancelled_count: number;
+            /** Active Count */
+            active_count: number;
+            /** Success Rate */
+            success_rate?: number | null;
+            /** Total Model Cost Usd */
+            total_model_cost_usd: number;
+            /** Cost Per Completed Mission Usd */
+            cost_per_completed_mission_usd?: number | null;
+            /** Step Metrics */
+            step_metrics: components["schemas"]["StepMetric"][];
+            /** Tool Metrics */
+            tool_metrics: components["schemas"]["ToolMetric"][];
+            /** Weekly Trend */
+            weekly_trend: components["schemas"]["WeeklyMissionMetric"][];
+        };
         /** OpportunityImport */
         OpportunityImport: {
             /**
@@ -1640,6 +1693,29 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** StepMetric */
+        StepMetric: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Name */
+            name: string;
+            /** Attempted */
+            attempted: number;
+            /** Completed */
+            completed: number;
+            /** Failed */
+            failed: number;
+            /** Success Rate */
+            success_rate?: number | null;
+            /** P50 Latency Ms */
+            p50_latency_ms?: number | null;
+            /** P95 Latency Ms */
+            p95_latency_ms?: number | null;
+        };
         /** StepView */
         StepView: {
             /**
@@ -1672,6 +1748,23 @@ export interface components {
             /** Error */
             error?: string | null;
         };
+        /** ToolMetric */
+        ToolMetric: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Name */
+            name: string;
+            /** Attempted */
+            attempted: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Success Rate */
+            success_rate: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1680,6 +1773,30 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WeeklyMissionMetric */
+        WeeklyMissionMetric: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /** Created */
+            created: number;
+            /** Completed */
+            completed: number;
+            /** Failed */
+            failed: number;
+            /** Cancelled */
+            cancelled: number;
+            /** Success Rate */
+            success_rate?: number | null;
         };
         /** WorkspaceView */
         WorkspaceView: {
@@ -3057,6 +3174,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvalComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    observability_summary_v1_observability_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservabilitySummary"];
                 };
             };
             /** @description Validation Error */
