@@ -1,0 +1,135 @@
+name: operator-production
+
+# Personal-project production stack for one Docker host. Only Caddy is public.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  temporal:
+    image: temporalio/temporal:1.9.1
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/var/lib/temporal/temporal.db"]
+    volumes:
+      - temporal-data:/var/lib/temporal
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+
+  migrate:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["python", "scripts/migrate.py"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    init: true
+    security_opt: ["no-new-privileges:true"]
+
+  api:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["uvicorn", "operator_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      TEMPORAL_ADDRESS: temporal:7233
+      OPERATOR_MODEL_ENABLED: ${OPERATOR_MODEL_ENABLED:-0}
+      OPERATOR_MODEL: ${OPERATOR_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPERATOR_MODEL_BUDGET_RESERVE_USD: ${OPERATOR_MODEL_BUDGET_RESERVE_USD:-0.10}
+      OPERATOR_MODEL_INPUT_USD_PER_MILLION: ${OPERATOR_MODEL_INPUT_USD_PER_MILLION:-0}
+      OPERATOR_MODEL_OUTPUT_USD_PER_MILLION: ${OPERATOR_MODEL_OUTPUT_USD_PER_MILLION:-0}
+      OPERATOR_API_REQUESTS_PER_MINUTE: ${OPERATOR_API_REQUESTS_PER_MINUTE:-240}
+      OPERATOR_GUEST_SESSIONS_PER_HOUR: ${OPERATOR_GUEST_SESSIONS_PER_HOUR:-20}
+      OPERATOR_MISSION_MUTATIONS_PER_MINUTE: ${OPERATOR_MISSION_MUTATIONS_PER_MINUTE:-20}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+    restart: unless-stopped
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  workflow-worker:
+    image: ${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}
+    command: ["python", "-m", "operator_worker.main"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+      TEMPORAL_ADDRESS: temporal:7233
+      OPERATOR_MODEL_ENABLED: ${OPERATOR_MODEL_ENABLED:-0}
+      OPERATOR_MODEL: ${OPERATOR_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPERATOR_MODEL_BUDGET_RESERVE_USD: ${OPERATOR_MODEL_BUDGET_RESERVE_USD:-0.10}
+      OPERATOR_MODEL_INPUT_USD_PER_MILLION: ${OPERATOR_MODEL_INPUT_USD_PER_MILLION:-0}
+      OPERATOR_MODEL_OUTPUT_USD_PER_MILLION: ${OPERATOR_MODEL_OUTPUT_USD_PER_MILLION:-0}
+      OPERATOR_DISPATCH_MAX_ATTEMPTS: ${OPERATOR_DISPATCH_MAX_ATTEMPTS:-8}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+
+  web:
+    image: ${OPERATOR_WEB_IMAGE:?set OPERATOR_WEB_IMAGE}
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  caddy:
+    image: caddy:2.10-alpine
+    environment:
+      OPERATOR_DOMAIN: ${OPERATOR_DOMAIN:?set OPERATOR_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+
+volumes:
+  postgres-data:
+  temporal-data:
+  caddy-data:
+  caddy-config:

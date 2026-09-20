@@ -2,6 +2,24 @@
 
 This runbook describes the production-shaped Compose configuration. It does not make the current guest-only build safe for unrestricted public traffic. Put authentication, shared edge rate limiting, TLS, and network controls in front of it before exposing it beyond a controlled demo. The built-in limiter protects one API process and intentionally does not claim multi-replica coordination.
 
+## Recommended personal-project production
+
+For this project, the most direct deployment is `compose.single-host.yaml` on one EC2 instance. It runs Caddy, the web app, API, worker, PostgreSQL/pgvector, and a persistent single-node Temporal dev server. Caddy is the only public service and obtains HTTPS certificates automatically.
+
+This avoids separate database and Temporal accounts. It is a sensible portfolio deployment with a single failure domain. Use EBS snapshots and the pipeline's pre-deploy PostgreSQL dumps. A future high-availability version should move PostgreSQL and Temporal to managed services and use `compose.production.yaml`.
+
+Recommended host shape:
+
+- Ubuntu 24.04 LTS on x86-64.
+- At least 4 vCPU, 16 GB RAM, and 80 GB gp3 storage because Chromium, Temporal, PostgreSQL, the API, and Next.js share the machine.
+- An Elastic IP.
+- Security-group ingress for TCP 80/443 from the internet and TCP 22 only from the administrator's IP. Do not expose PostgreSQL, Temporal, API, or web container ports.
+- Docker Engine with the Compose plugin and a non-root deployment user permitted to run Docker.
+
+Point an `A`/`AAAA` record for the chosen domain to the instance before starting Caddy. Copy `.env.single-host.example` to `/opt/operator/.env.production`, replace all placeholders, set file mode `600`, and authenticate Docker to GHCR with a read-only package token if the package is private.
+
+The single-node Temporal service uses a persistent SQLite history file. It survives container restarts but is not a highly available production Temporal cluster. This limitation is acceptable for the personal demo target and must remain visible in project documentation.
+
 ## Required platform services
 
 - A PostgreSQL 16 database with the `vector` extension, automated backups, point-in-time recovery, and TLS required.
@@ -24,6 +42,32 @@ docker push REGISTRY/operator-web:GIT_SHA
 ```
 
 Copy `.env.production.example` outside the repository, replace every placeholder, and load the values through the deployment platform. Do not commit the populated file.
+
+## GitHub Actions CI/CD
+
+`.github/workflows/ci.yml` performs the following:
+
+1. Runs the complete quality suite for every push and pull request.
+2. After a successful `main` push or manual dispatch, builds the API and web containers and publishes immutable commit-SHA tags to GHCR.
+3. If the repository variable `PRODUCTION_ENABLED` is `true`, deploys those exact images to the GitHub `production` environment over SSH.
+4. Copies only non-secret manifests, takes a compressed PostgreSQL dump when a database is already running, runs migrations, waits for container health checks, and verifies the public HTTPS URL.
+
+Configure one repository variable:
+
+- `PRODUCTION_ENABLED=true` after the server is fully prepared. Leave it unset while testing image publication.
+
+Configure the GitHub `production` environment with optional reviewer approval and these values:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| Variable | `PRODUCTION_HOST` | EC2 Elastic IP or SSH hostname |
+| Variable | `PRODUCTION_USER` | Restricted deployment user, usually `ubuntu` |
+| Variable | `PRODUCTION_PATH` | `/opt/operator` |
+| Variable | `PRODUCTION_URL` | `https://your-domain.example` |
+| Secret | `PRODUCTION_SSH_KEY` | Private deployment key |
+| Secret | `PRODUCTION_KNOWN_HOSTS` | Pinned host-key line from `ssh-keyscan`, verified independently |
+
+The server keeps the secret `.env.production` file. GitHub Actions never creates or reads it. The deployment user and GHCR credential should have only the permissions needed to pull images and operate this Compose project.
 
 Validate resolved configuration before rollout:
 

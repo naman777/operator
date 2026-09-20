@@ -1,5 +1,16 @@
-name: Quality
-on: [push, pull_request]
+name: Quality and deploy
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -29,3 +40,112 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+      - run: docker compose --env-file .env.single-host.example -f compose.single-host.yaml config --quiet
+
+  publish:
+    name: Publish ${{ matrix.image }} image
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: registry
+        name: Normalize registry path
+        shell: bash
+        run: echo "base=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ steps.registry.outputs.base }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ steps.registry.outputs.base }}/${{ matrix.image }}:production
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy-production:
+    name: Deploy production
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')) &&
+      vars.PRODUCTION_ENABLED == 'true'
+    needs: publish
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: registry
+        name: Resolve immutable image names
+        shell: bash
+        run: |
+          echo "api=ghcr.io/${GITHUB_REPOSITORY,,}/api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "web=ghcr.io/${GITHUB_REPOSITORY,,}/web:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Install deployment manifests
+        shell: bash
+        env:
+          DEPLOY_TARGET: ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_HOST }}
+          DEPLOY_PATH: ${{ vars.PRODUCTION_PATH }}
+        run: |
+          ssh "$DEPLOY_TARGET" "mkdir -p '$DEPLOY_PATH/infra' '$DEPLOY_PATH/backups'"
+          scp compose.single-host.yaml "$DEPLOY_TARGET:$DEPLOY_PATH/compose.single-host.yaml"
+          scp infra/Caddyfile "$DEPLOY_TARGET:$DEPLOY_PATH/infra/Caddyfile"
+      - name: Back up PostgreSQL if already running
+        shell: bash
+        env:
+          DEPLOY_TARGET: ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_HOST }}
+          DEPLOY_PATH: ${{ vars.PRODUCTION_PATH }}
+        run: |
+          ssh "$DEPLOY_TARGET" "cd '$DEPLOY_PATH' && if docker compose --env-file .env.production -f compose.single-host.yaml ps --status running postgres --quiet | grep -q .; then docker compose --env-file .env.production -f compose.single-host.yaml exec -T postgres sh -c 'pg_dump -U \"\$POSTGRES_USER\" \"\$POSTGRES_DB\"' | gzip > 'backups/predeploy-${GITHUB_SHA}.sql.gz'; fi"
+      - name: Pull and deploy immutable images
+        shell: bash
+        env:
+          API_IMAGE: ${{ steps.registry.outputs.api }}
+          WEB_IMAGE: ${{ steps.registry.outputs.web }}
+          DEPLOY_TARGET: ${{ vars.PRODUCTION_USER }}@${{ vars.PRODUCTION_HOST }}
+          DEPLOY_PATH: ${{ vars.PRODUCTION_PATH }}
+        run: |
+          ssh "$DEPLOY_TARGET" "cd '$DEPLOY_PATH' && OPERATOR_API_IMAGE='$API_IMAGE' OPERATOR_WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f compose.single-host.yaml pull && OPERATOR_API_IMAGE='$API_IMAGE' OPERATOR_WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f compose.single-host.yaml up -d --remove-orphans"
+      - name: Verify production
+        shell: bash
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: |
+          for attempt in {1..24}; do
+            if curl --fail --silent --show-error --max-time 10 "$PRODUCTION_URL/" > /dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production did not become healthy within two minutes" >&2
+          exit 1

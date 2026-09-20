@@ -339,6 +339,13 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 - Production Compose configuration resolves successfully without contacting the unavailable Docker daemon. Public deployment remains blocked on production authentication, rate limiting, secret management, and staging restore verification.
 - Validation: production Compose config passed; 102 Python tests passed with the opt-in live Temporal test skipped; Ruff, generated contracts, four frontend tests, Prettier, TypeScript, and the Next.js production build passed.
 
+## Phase 8 continuation: direct-production CI/CD
+- Added a personal-project single-host production stack for EC2: Caddy with automatic HTTPS, web, API, worker, PostgreSQL/pgvector, and persistent single-node Temporal. Only ports 80/443 are published by Compose.
+- Extended GitHub Actions from CI into gated CD. Successful `main` or manual builds publish immutable API/web images to GHCR; deployment stays disabled until the repository variable `PRODUCTION_ENABLED=true`.
+- The production job uses a protected GitHub environment, pinned SSH host keys, environment-scoped host configuration, server-resident secrets, pre-deploy PostgreSQL dumps, migration-gated startup, container health checks, and a public HTTPS smoke check.
+- Added a placeholder-only single-host environment template and documented EC2 sizing, DNS, firewall, Docker/GHCR setup, GitHub variables/secrets, backups, and the single-node Temporal durability limitation.
+- No cloud account, host, DNS record, repository environment, or secret has been configured from this checkout; those external prerequisites are required before the first deployment.
+
 ## Phase 6/7 continuation: admission controls, dead letters, and 40-case evaluation
 - Added configurable sliding-window limits for general API traffic, guest-session creation, and mission mutations. Identifiers are one-way hashed, raw tokens and client addresses are not retained, responses include `Retry-After` and rate-limit headers, and the in-memory key set is bounded.
 - Mission limits are workspace-token scoped while the general and guest limits remain client-address scoped so rotating an invalid bearer value cannot bypass general admission control. The built-in limiter is explicitly a single-process layer; public multi-replica deployment still requires a shared edge or distributed limiter.
