@@ -173,6 +173,23 @@ class GuestSession(Contract):
     workspace: WorkspaceView
 
 
+class AccountCredentials(Contract):
+    email: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=12, max_length=128)
+
+
+class AccountView(Contract):
+    id: str
+    email: str
+
+
+class AccountSessionView(Contract):
+    token: str
+    account: AccountView
+    workspace: WorkspaceView
+    expires_at: datetime
+
+
 class MissionView(MissionInput):
     id: str
     workspace_id: str

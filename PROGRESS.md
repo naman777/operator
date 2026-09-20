@@ -366,3 +366,11 @@ Native database backed up before migrations 005/006; API, worker and dashboard r
 ## Phase 8 continuation: architecture decisions
 - Added five architecture decision records covering durable Temporal missions, deterministic authority with guarded model enrichment, immutable evidence provenance, guarded public extraction, and workspace/approval boundaries.
 - Added an ADR index so reviewers can assess the project's central tradeoffs and consequences independently of its implementation history.
+
+## Foundation continuation: persistent account sessions
+- Added first-party account registration that claims the current guest workspace without copying or losing its missions, profile, evidence, applications, approvals, or artifacts.
+- Added normalized unique email identities, salted `scrypt` password hashes, random hashed-at-rest 30-day session tokens, login restoration, and per-session logout revocation.
+- Claiming a workspace immediately invalidates its guest token, removes guest expiry, and retains the existing workspace authorization boundary. The no-signup guest demo remains available.
+- Added migration 016 for accounts, account sessions, and optional workspace ownership, plus repeatability, credential validation, token invalidation, restoration, revocation, and isolation coverage.
+- This is a self-contained account foundation; email verification, password recovery, OAuth providers, and the account-facing web forms remain future product choices.
+- Validation: 108 Python tests passed with one opt-in live Temporal test skipped; Ruff and TypeScript checks passed; generated OpenAPI and TypeScript contracts include the account/session endpoints.

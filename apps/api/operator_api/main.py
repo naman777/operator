@@ -21,6 +21,8 @@ from .logging_config import configure_logging
 from .rate_limits import Limit, SlidingWindowLimiter
 from .db import (
     APPLICATION_STAGES,
+    Account,
+    AccountSession,
     Approval,
     Application,
     Artifact,
@@ -55,6 +57,8 @@ from .schemas import (
     CandidateProfile,
     EventView,
     GuestSession,
+    AccountCredentials,
+    AccountSessionView,
     JobPosting,
     MissionInput,
     MissionView,
@@ -80,6 +84,7 @@ from . import (
     connectors,
     browser_renderer,
     observability,
+    accounts,
 )
 
 configure_logging()
@@ -146,7 +151,11 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
             )
             workspace_key = hashlib.sha256(workspace_identity.encode()).hexdigest()
             limits = [(api_limit, network_key)]
-            if request.method == "POST" and request.url.path == "/v1/guest-sessions":
+            if request.method == "POST" and request.url.path in {
+                "/v1/guest-sessions",
+                "/v1/accounts/login",
+                "/v1/accounts/register",
+            }:
                 limits.append((guest_limit, network_key))
             if request.method == "POST" and (
                 request.url.path == "/v1/missions"
@@ -197,6 +206,21 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
             raise HTTPException(401, "Guest session required")
         digest = hashlib.sha256(authorization[7:].encode()).hexdigest()
         found = db.scalar(select(Workspace).where(Workspace.token_hash == digest))
+        if not found:
+            account_session = db.scalar(
+                select(AccountSession).where(
+                    AccountSession.token_hash == digest,
+                    AccountSession.revoked_at.is_(None),
+                )
+            )
+            if account_session:
+                expires = account_session.expires_at
+                if expires.tzinfo is None:
+                    from datetime import timezone as _tz
+
+                    expires = expires.replace(tzinfo=_tz.utc)
+                if expires >= utcnow():
+                    found = db.get(Workspace, account_session.workspace_id)
         if not found:
             raise HTTPException(401, "Invalid guest session")
         if found.expires_at:
@@ -253,6 +277,74 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
         db.commit()
         response.headers["Cache-Control"] = "no-store"
         return {"token": token, "workspace": ws}
+
+    def account_session_response(db, account, ws):
+        token = secrets.token_urlsafe(32)
+        expires_at = utcnow() + timedelta(days=30)
+        db.add(
+            AccountSession(
+                id=str(uuid4()),
+                account_id=account.id,
+                workspace_id=ws.id,
+                token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                expires_at=expires_at,
+            )
+        )
+        return {"token": token, "account": account, "workspace": ws, "expires_at": expires_at}
+
+    @app.post("/v1/accounts/register", response_model=AccountSessionView, status_code=201)
+    def register_account(body: AccountCredentials, ws: WS, db: DB, response: Response):
+        if ws.account_id:
+            raise HTTPException(409, "Workspace already belongs to an account")
+        email = body.email.strip().casefold()
+        if db.scalar(select(Account).where(Account.email == email)):
+            raise HTTPException(409, "Account already exists")
+        account = Account(
+            id=str(uuid4()), email=email, password_hash=accounts.hash_password(body.password)
+        )
+        db.add(account)
+        db.flush()
+        ws.account_id = account.id
+        ws.is_demo = False
+        ws.expires_at = None
+        ws.token_hash = hashlib.sha256(secrets.token_bytes(32)).hexdigest()
+        result = account_session_response(db, account, ws)
+        db.commit()
+        response.headers["Cache-Control"] = "no-store"
+        return result
+
+    @app.post("/v1/accounts/login", response_model=AccountSessionView)
+    def login_account(body: AccountCredentials, db: DB, response: Response):
+        account = db.scalar(select(Account).where(Account.email == body.email.strip().casefold()))
+        if not account or not accounts.verify_password(body.password, account.password_hash):
+            raise HTTPException(401, "Invalid email or password")
+        ws = db.scalar(select(Workspace).where(Workspace.account_id == account.id))
+        if not ws:
+            raise HTTPException(409, "Account workspace is unavailable")
+        result = account_session_response(db, account, ws)
+        db.commit()
+        response.headers["Cache-Control"] = "no-store"
+        return result
+
+    @app.post("/v1/accounts/logout", status_code=204)
+    def logout_account(
+        db: DB,
+        ws: WS,
+        authorization: Annotated[str | None, Header()] = None,
+    ):
+        digest = hashlib.sha256(authorization[7:].encode()).hexdigest()
+        account_session = db.scalar(
+            select(AccountSession).where(
+                AccountSession.token_hash == digest,
+                AccountSession.workspace_id == ws.id,
+                AccountSession.revoked_at.is_(None),
+            )
+        )
+        if not account_session:
+            raise HTTPException(422, "Current session is not an account session")
+        account_session.revoked_at = utcnow()
+        db.commit()
+        return Response(status_code=204)
 
     @app.get("/v1/workspace", response_model=WorkspaceView)
     def current_workspace(ws: WS):

@@ -35,9 +35,11 @@ def test_migrations_are_repeatable(tmp_path):
         "external_actions",
         "model_calls",
         "evidence_chunks",
+        "accounts",
+        "account_sessions",
     }
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 15
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 16
         # Verify new columns added by migrations 007 and 008.
         approvals_cols = {r[1].lower() for r in connection.execute(text("PRAGMA table_info(approvals)")).fetchall()}
         assert "workflow_id" in approvals_cols
@@ -51,6 +53,10 @@ def test_migrations_are_repeatable(tmp_path):
             for r in connection.execute(text("PRAGMA table_info(dispatch_commands)")).fetchall()
         }
         assert "dead_lettered_at" in dispatch_cols
+        workspace_cols = {
+            r[1].lower() for r in connection.execute(text("PRAGMA table_info(workspaces)")).fetchall()
+        }
+        assert "account_id" in workspace_cols
     engine.dispose()
 
 
@@ -68,5 +74,5 @@ def test_migrations_adopt_existing_local_bootstrap(tmp_path):
         capture_output=True,
     )
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 15
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 16
     engine.dispose()
