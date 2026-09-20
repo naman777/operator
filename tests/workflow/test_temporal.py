@@ -24,6 +24,7 @@ from operator_api.db import (
     MissionStep,
     database,
 )
+import operator_api.main as api_main
 from operator_api.main import create_app
 from operator_worker.activities import Activities
 from operator_worker.dispatcher import dispatch_once
@@ -52,6 +53,8 @@ async def run_scenarios(tmp_path):
     engine, sessions = database(url)
     activities = Activities(sessions)
     task_queue = f"operator-test-{uuid4()}"
+    previous_temporal_client = api_main._TEMPORAL_CLIENT
+    api_main._TEMPORAL_CLIENT = temporal
     try:
         with TestClient(create_app(url)) as api, ThreadPoolExecutor(max_workers=4) as executor:
             token = api.post("/v1/guest-sessions").json()["token"]
@@ -93,9 +96,13 @@ async def run_scenarios(tmp_path):
                             )
                         )
                     if approval:
-                        await temporal.get_workflow_handle(workflow_id).signal(
-                            "approval_resolved", True
+                        response = api.post(
+                            f"/v1/approvals/{approval.id}/approve",
+                            headers=headers,
+                            json={"note": "live Temporal integration test"},
                         )
+                        assert response.status_code == 200
+                        assert response.json()["status"] == "approved"
                         break
                     handle = temporal.get_workflow_handle(workflow_id)
                     description = await handle.describe()
@@ -177,6 +184,7 @@ async def run_scenarios(tmp_path):
                 assert db.get(Mission, cancelled).status == "cancelled"
                 assert db.get(MissionRun, cancelled).result is None
     finally:
+        api_main._TEMPORAL_CLIENT = previous_temporal_client
         engine.dispose()
         if environment:
             await environment.shutdown()

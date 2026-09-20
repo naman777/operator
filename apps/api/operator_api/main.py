@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
+from anyio import from_thread
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from playwright.sync_api import Error as PlaywrightError
@@ -110,6 +111,18 @@ async def _get_temporal_client():
         logger.warning("Temporal unavailable; approval signals will be skipped: %s", type(exc).__name__)
         return None
     return _TEMPORAL_CLIENT
+
+
+async def _signal_approval(workflow_id: str, approved: bool) -> None:
+    """Signal a persisted approval decision from FastAPI's event loop."""
+    client = await _get_temporal_client()
+    if client is None:
+        return
+    try:
+        handle = client.get_workflow_handle(workflow_id)
+        await handle.signal("approval_resolved", approved)
+    except Exception as exc:
+        logger.warning("Approval signal failed: %s", type(exc).__name__)
 
 
 def create_app(database_url=None, limit_overrides: dict[str, int] | None = None):
@@ -689,25 +702,7 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
         # Send the Temporal signal after the DB commit so the signal is only
         # delivered once the approval is durably persisted.
         if workflow_id:
-            import asyncio
-
-            async def _signal():
-                client = await _get_temporal_client()
-                if client:
-                    try:
-                        handle = client.get_workflow_handle(workflow_id)
-                        await handle.signal("approval_resolved", True)
-                    except Exception as exc:
-                        logger.warning("Approval signal failed: %s", type(exc).__name__)
-
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(_signal())
-                else:
-                    loop.run_until_complete(_signal())
-            except Exception as exc:
-                logger.warning("Could not dispatch approval signal: %s", type(exc).__name__)
+            from_thread.run(_signal_approval, workflow_id, True)
         return approval
 
     @app.patch("/v1/approvals/{approval_id}/proposal", response_model=ApprovalView)
@@ -739,25 +734,7 @@ def create_app(database_url=None, limit_overrides: dict[str, int] | None = None)
         workflow_id = approval.workflow_id
         db.commit()
         if workflow_id:
-            import asyncio
-
-            async def _signal():
-                client = await _get_temporal_client()
-                if client:
-                    try:
-                        handle = client.get_workflow_handle(workflow_id)
-                        await handle.signal("approval_resolved", False)
-                    except Exception as exc:
-                        logger.warning("Rejection signal failed: %s", type(exc).__name__)
-
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(_signal())
-                else:
-                    loop.run_until_complete(_signal())
-            except Exception as exc:
-                logger.warning("Could not dispatch rejection signal: %s", type(exc).__name__)
+            from_thread.run(_signal_approval, workflow_id, False)
         return approval
 
     @app.post("/v1/actions/propose", response_model=ApprovalView, status_code=201)

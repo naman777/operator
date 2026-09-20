@@ -14,6 +14,22 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: operator_test
+          POSTGRES_PASSWORD: operator_test
+          POSTGRES_DB: operator_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U operator_test -d operator_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      OPERATOR_TEST_POSTGRES_URL: postgresql+psycopg://operator_test:operator_test@127.0.0.1:5432/operator_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

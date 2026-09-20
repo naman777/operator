@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import pytest
 from sqlalchemy import create_engine, inspect, text
 
 
@@ -75,4 +76,35 @@ def test_migrations_adopt_existing_local_bootstrap(tmp_path):
     )
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 16
+    engine.dispose()
+
+
+@pytest.mark.skipif(
+    not os.getenv("OPERATOR_TEST_POSTGRES_URL"),
+    reason="Set OPERATOR_TEST_POSTGRES_URL to test fresh PostgreSQL migrations",
+)
+def test_migrations_on_fresh_postgresql():
+    root = Path(__file__).resolve().parents[2]
+    url = os.environ["OPERATOR_TEST_POSTGRES_URL"]
+    result = subprocess.run(
+        [sys.executable, str(root / "scripts/migrate.py")],
+        env={**os.environ, "DATABASE_URL": url},
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "Applied 007_approval_workflow_id" in result.stdout
+    assert "Applied 008_artifact_superseded" in result.stdout
+
+    engine = create_engine(url)
+    inspector = inspect(engine)
+    assert "approvals" in inspector.get_table_names()
+    assert "artifacts" in inspector.get_table_names()
+    assert "workflow_id" in {column["name"] for column in inspector.get_columns("approvals")}
+    assert "superseded_by" in {column["name"] for column in inspector.get_columns("artifacts")}
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT COUNT(*) FROM schema_migrations")) == 16
+        assert connection.scalar(
+            text("SELECT extversion FROM pg_extension WHERE extname = 'vector'")
+        )
     engine.dispose()
