@@ -180,7 +180,7 @@ class Activities:
             if not mission or mission.status in {"cancelled", "failed", "completed"}:
                 return {"stopped": True}
             if outcome == "approved":
-                mission.status = "running"
+                mission.status = "generating"
                 runtime.record_event(db, mission, "approval.resolved", {"status": "approved"})
             else:
                 mission.status = "cancelled"

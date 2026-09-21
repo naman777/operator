@@ -5,8 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 import operator_api.main as main_module
-from operator_api.db import Approval, database
+from operator_api.db import Approval, Mission, database
 from operator_api.main import create_app
+from operator_worker.activities import Activities
 
 
 @pytest.mark.parametrize(
@@ -105,3 +106,29 @@ def test_temporal_client_connect_uses_supported_sdk_arguments(monkeypatch):
 
     assert asyncio.run(main_module._get_temporal_client()) is sentinel
     assert calls == ["temporal:7233"]
+
+
+def test_approved_workflow_transition_remains_api_serializable(tmp_path):
+    url = f"sqlite:///{tmp_path / 'approval-transition.db'}"
+    engine, sessions = database(url)
+
+    with TestClient(create_app(url)) as client:
+        guest = client.post("/v1/guest-sessions").json()
+        headers = {"Authorization": f"Bearer {guest['token']}"}
+        mission = client.post(
+            "/v1/missions",
+            headers={**headers, "Idempotency-Key": str(uuid4())},
+            json={"job_url": "https://example.com/jobs/1"},
+        ).json()
+        with sessions.begin() as session:
+            session.get(Mission, mission["id"]).status = "awaiting_approval"
+
+        Activities(sessions).resolve_approval_wait(
+            {"mission_id": mission["id"], "outcome": "approved"}
+        )
+
+        response = client.get(f"/v1/missions/{mission['id']}/run", headers=headers)
+        assert response.status_code == 200
+        assert response.json()["mission"]["status"] == "generating"
+
+    engine.dispose()
