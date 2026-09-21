@@ -111,15 +111,119 @@ def test_eligibility_not_set_when_json_ld_has_no_constraints():
     assert posting.eligibility_requirements is None
 
 
+def test_posting_dates_are_preserved_without_inventing_missing_dates():
+    job = {
+        "@type": "JobPosting",
+        "title": "Engineer",
+        "hiringOrganization": {"name": "Example Co"},
+        "description": "Build services.",
+        "datePosted": "2026-08-15T12:00:00Z",
+        "validThrough": "2026-11-30T23:59:59Z",
+    }
+    posting = extraction.parse(
+        "https://jobs.example/engineer", '<script type="application/ld+json">' + json.dumps(job) + "</script>"
+    )
+    assert posting.date_posted == date(2026, 8, 15)
+    assert posting.valid_through == date(2026, 11, 30)
+    assert extraction.parse("https://jobs.example/role", page()).valid_through is None
+
+
+def test_labeled_description_lists_supply_source_backed_requirements():
+    job = {
+        "@type": "JobPosting",
+        "title": "Software Engineer",
+        "hiringOrganization": {"name": "Example Co"},
+        "description": (
+            "<b>Responsibilities</b><ul><li>Build an API</li></ul>"
+            "<b>Requirements</b><ul><li>Python and SQL experience</li><li>Use Docker</li></ul>"
+            "<strong>Nice to have</strong><ul><li>Temporal familiarity</li></ul>"
+            "<b>Benefits</b><ul><li>Free lunch</li></ul>"
+        ),
+    }
+    posting = extraction.parse(
+        "https://jobs.example/engineer", '<script type="application/ld+json">' + json.dumps(job) + "</script>"
+    )
+    assert [(item.text, item.importance) for item in posting.requirements] == [
+        ("Python and SQL experience", "required"),
+        ("Use Docker", "required"),
+        ("Temporal familiarity", "preferred"),
+    ]
+    assert all(item.source_id == posting.sources[0].id for item in posting.requirements)
+    assert all(item.text in posting.sources[0].excerpt for item in posting.requirements)
+
+
+def test_ashby_public_board_adapter_matches_exact_published_job(tmp_path):
+    from unittest.mock import MagicMock
+    from urllib.parse import urlsplit
+
+    url = "https://jobs.ashbyhq.com/sampleco/11111111-1111-4111-8111-111111111111"
+    job = {
+        "title": "Backend Engineer",
+        "jobUrl": url,
+        "location": "Remote",
+        "publishedAt": "2026-09-01T12:00:00Z",
+        "descriptionHtml": (
+            "<h2><strong>What We're Looking For</strong></h2>"
+            "<ul><li><p>Build Python services</p></li></ul>"
+            "<h2>You May Be a Good Fit If You Also</h2>"
+            "<p>Know Temporal workflows</p>"
+            "<h2>What We Offer</h2><p>Free lunch</p>"
+        ),
+    }
+    response = MagicMock()
+    response.status = 200
+    response.getheader.side_effect = lambda name: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Encoding": "identity",
+    }.get(name)
+    response.read.return_value = json.dumps({"apiVersion": "1", "jobs": [job]}).encode()
+    connection = MagicMock()
+    connection.getresponse.return_value = response
+    api_url = "https://api.ashbyhq.com/posting-api/job-board/sampleco"
+    with (
+        patch("operator_api.extraction.public_target", return_value=(urlsplit(api_url), "1.1.1.1")),
+        patch("operator_api.extraction.PinnedHTTPS", return_value=connection),
+    ):
+        with TestClient(create_app(f"sqlite:///{tmp_path / 'ashby.db'}")) as client:
+            token = client.post("/v1/guest-sessions").json()["token"]
+            headers = {"Authorization": f"Bearer {token}"}
+            receipt = client.post("/v1/opportunities/import", headers=headers, json={"url": url})
+            assert receipt.status_code == 201
+            posting = receipt.json()["posting"]
+            assert posting["company"] == "sampleco"
+            assert posting["date_posted"] == "2026-09-01"
+            assert [(item["text"], item["importance"]) for item in posting["requirements"]] == [
+                ("Build Python services", "required"),
+                ("Know Temporal workflows", "preferred"),
+            ]
+            assert posting["sources"][0]["url"] == api_url
+            assert client.get("/v1/opportunities/imports", headers=headers).json()[0] == receipt.json()
+        response.read.return_value = json.dumps({"apiVersion": "1", "jobs": []}).encode()
+        with pytest.raises(ValueError, match="not currently published"):
+            extraction.fetch_ashby(url)
+    connection.close.assert_called()
+
+
+def test_ashby_adapter_rejects_non_detail_or_cross_host_urls():
+    with pytest.raises(ValueError, match="job-detail"):
+        extraction.ashby_target("https://jobs.ashbyhq.com/sampleco")
+    assert (
+        extraction.ashby_target(
+            "https://jobs.ashbyhq.com.evil.example/sampleco/11111111-1111-4111-8111-111111111111"
+        )
+        is None
+    )
+
+
 def test_import_persistence_workspace_isolation_and_workflow(tmp_path):
     url = f"sqlite:///{tmp_path / 'import.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
         headers = {
-            "Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"],
+            "Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"],
             "Idempotency-Key": "import-mission-001",
         }
-        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
         with patch("operator_api.extraction.fetch", return_value=("https://jobs.example/role", page())):
             receipt = client.post(
                 "/v1/opportunities/import", headers=headers, json={"url": "https://jobs.example/role"}
@@ -154,8 +258,8 @@ def test_import_persistence_workspace_isolation_and_workflow(tmp_path):
 def test_browser_fallback_persists_workspace_scoped_screenshot(tmp_path):
     url = f"sqlite:///{tmp_path / 'browser.db'}"
     with TestClient(create_app(url)) as client:
-        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
-        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
+        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
         with (
             patch("operator_api.extraction.fetch", return_value=("https://jobs.example/role", "<div/>")),
             patch(
@@ -172,9 +276,43 @@ def test_browser_fallback_persists_workspace_scoped_screenshot(tmp_path):
         assert screenshot.status_code == 200
         assert screenshot.headers["content-type"] == "image/png"
         assert screenshot.content.startswith(b"\x89PNG")
-        assert client.get(
-            f"/v1/opportunities/imports/{receipt['import_id']}/screenshot", headers=other
-        ).status_code == 404
+        assert (
+            client.get(
+                f"/v1/opportunities/imports/{receipt['import_id']}/screenshot", headers=other
+            ).status_code
+            == 404
+        )
+
+
+def test_import_errors_identify_missing_pages_and_unsupported_structure(tmp_path):
+    with TestClient(create_app(f"sqlite:///{tmp_path / 'import-errors.db'}")) as client:
+        token = client.post("/v1/guest-sessions").json()["token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        with patch("operator_api.extraction.fetch", side_effect=ValueError("Job page returned HTTP 404")):
+            missing = client.post(
+                "/v1/opportunities/import",
+                headers=headers,
+                json={"url": "https://jobs.example/missing"},
+            )
+        assert missing.status_code == 422
+        assert missing.json()["detail"] == "Job page returned HTTP 404"
+        with (
+            patch(
+                "operator_api.extraction.fetch", return_value=("https://jobs.example/role", "<h1>Role</h1>")
+            ),
+            patch(
+                "operator_api.browser_renderer.render",
+                return_value=("https://jobs.example/role", "<h1>Role</h1>", b"png"),
+            ),
+        ):
+            unsupported = client.post(
+                "/v1/opportunities/import",
+                headers=headers,
+                json={"url": "https://jobs.example/role"},
+            )
+        assert unsupported.status_code == 422
+        assert "No single structured JobPosting" in unsupported.json()["detail"]
+        assert client.get("/v1/opportunities/imports", headers=headers).json() == []
 
 
 def test_browser_request_guard_blocks_cross_origin_private_and_nonessential_requests():

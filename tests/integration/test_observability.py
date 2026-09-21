@@ -10,9 +10,9 @@ from operator_api.main import create_app
 def test_observability_is_measured_and_workspace_scoped(tmp_path):
     url = f"sqlite:///{tmp_path / 'observability.db'}"
     with TestClient(create_app(url)) as client:
-        guest = client.post("/v1/guest-sessions").json()
+        guest = client.post("/v1/guest-sessions?demo=true").json()
         headers = {"Authorization": f"Bearer {guest['token']}"}
-        other = client.post("/v1/guest-sessions").json()
+        other = client.post("/v1/guest-sessions?demo=true").json()
         other_headers = {"Authorization": f"Bearer {other['token']}"}
 
         first = client.post(

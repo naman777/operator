@@ -12,7 +12,7 @@ def test_ingestion_corrections_isolation_and_conflicts(tmp_path):
     with TestClient(create_app(url)) as client:
 
         def guest():
-            return {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+            return {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
 
         headers, other = guest(), guest()
         document = {
@@ -61,7 +61,7 @@ def test_workflow_profile_snapshot_is_stable_after_corrections(tmp_path):
     url = f"sqlite:///{tmp_path / 'snapshot.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": "Bearer " + token, "Idempotency-Key": "snapshot-test-001"}
         state = client.get("/v1/profile/state", headers=headers).json()
         state["profile"]["name"] = "Before run"
@@ -76,6 +76,7 @@ def test_workflow_profile_snapshot_is_stable_after_corrections(tmp_path):
         planning = ActivityEnvironment().run(
             activities.execute_step, {"mission_id": mid, "run_number": 1, "step": "planning"}
         )
+        state = client.get("/v1/profile/state", headers=headers).json()
         state["profile"]["name"] = "After run"
         client.patch(
             "/v1/profile", headers=headers, json={"expected_version": 1, "profile": state["profile"]}
@@ -102,7 +103,7 @@ def test_structured_resume_parsing_extracts_graduation_and_experience(tmp_path):
     """Heuristic parser should extract graduation year and experience years from plain text."""
     url = f"sqlite:///{tmp_path / 'parse.db'}"
     with TestClient(create_app(url)) as client:
-        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
         # Multi-section resume with clear education and experience sections.
         resume_text = (
             "EDUCATION\n"
@@ -132,7 +133,7 @@ def test_user_correction_takes_precedence_over_heuristic(tmp_path):
     """A user correction (parse_source=user-correction) must not be overwritten by heuristic parsing."""
     url = f"sqlite:///{tmp_path / 'prio.db'}"
     with TestClient(create_app(url)) as client:
-        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+        headers = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
         # First, set a user-corrected graduation year via PATCH.
         state = client.get("/v1/profile/state", headers=headers).json()
         state["profile"]["graduation_year"] = 2025
@@ -155,7 +156,7 @@ def test_ingestion_persists_embeddings_and_retrieves_relevant_evidence(tmp_path)
     url = f"sqlite:///{tmp_path / 'vectors.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
-        guest = client.post("/v1/guest-sessions").json()
+        guest = client.post("/v1/guest-sessions?demo=true").json()
         headers = {"Authorization": "Bearer " + guest["token"]}
         workspace_id = guest["workspace"]["id"]
         receipt = client.post(
@@ -182,11 +183,9 @@ def test_evidence_deletion_updates_profile_and_vector_index_atomically(tmp_path)
     url = f"sqlite:///{tmp_path / 'delete-vectors.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
-        guest = client.post("/v1/guest-sessions").json()
+        guest = client.post("/v1/guest-sessions?demo=true").json()
         headers = {"Authorization": "Bearer " + guest["token"]}
-        other = {
-            "Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]
-        }
+        other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
         receipt = client.post(
             "/v1/profile/documents",
             headers=headers,

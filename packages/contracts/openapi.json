@@ -57,6 +57,18 @@
       "post": {
         "summary": "Guest",
         "operationId": "guest_v1_guest_sessions_post",
+        "parameters": [
+          {
+            "name": "demo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Demo"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "Successful Response",
@@ -64,6 +76,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GuestSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -251,6 +273,192 @@
         }
       }
     },
+    "/v1/accounts/sessions": {
+      "get": {
+        "summary": "List Account Sessions",
+        "operationId": "list_account_sessions_v1_accounts_sessions_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountDeviceView"
+                  },
+                  "title": "Response List Account Sessions V1 Accounts Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accounts/sessions/{session_id}": {
+      "delete": {
+        "summary": "Revoke Account Session",
+        "operationId": "revoke_account_session_v1_accounts_sessions__session_id__delete",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accounts/sessions/revoke-others": {
+      "post": {
+        "summary": "Revoke Other Sessions",
+        "operationId": "revoke_other_sessions_v1_accounts_sessions_revoke_others_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/accounts/password": {
+      "post": {
+        "summary": "Change Password",
+        "operationId": "change_password_v1_accounts_password_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspace": {
       "get": {
         "summary": "Current Workspace",
@@ -281,6 +489,50 @@
                 "schema": {
                   "$ref": "#/components/schemas/WorkspaceView"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspace/export": {
+      "get": {
+        "summary": "Export Workspace",
+        "operationId": "export_workspace_v1_workspace_export_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -402,6 +654,233 @@
         "summary": "Profile State",
         "operationId": "profile_state_v1_profile_state_get",
         "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profile/confirm": {
+      "post": {
+        "summary": "Confirm Profile",
+        "operationId": "confirm_profile_v1_profile_confirm_post",
+        "parameters": [
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Expected Version"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profile/archives": {
+      "get": {
+        "summary": "Profile Archives",
+        "operationId": "profile_archives_v1_profile_archives_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileArchiveView"
+                  },
+                  "title": "Response Profile Archives V1 Profile Archives Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profile/start-fresh": {
+      "post": {
+        "summary": "Start Fresh Profile",
+        "operationId": "start_fresh_profile_v1_profile_start_fresh_post",
+        "parameters": [
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Expected Version"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/profile/archives/{archive_id}/restore": {
+      "post": {
+        "summary": "Restore Profile",
+        "operationId": "restore_profile_v1_profile_archives__archive_id__restore_post",
+        "parameters": [
+          {
+            "name": "archive_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Archive Id"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "Expected Version"
+            }
+          },
           {
             "name": "authorization",
             "in": "header",
@@ -2116,6 +2595,71 @@
         }
       }
     },
+    "/v1/opportunities/imports/{import_id}/review": {
+      "patch": {
+        "summary": "Review Imported Job",
+        "operationId": "review_imported_job_v1_opportunities_imports__import_id__review_patch",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobReviewUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/opportunities/imports/{import_id}/screenshot": {
       "get": {
         "summary": "Imported Job Screenshot",
@@ -2520,6 +3064,55 @@
           "password"
         ],
         "title": "AccountCredentials"
+      },
+      "AccountDeviceView": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_agent",
+          "created_at",
+          "expires_at",
+          "current"
+        ],
+        "title": "AccountDeviceView"
       },
       "AccountSessionView": {
         "properties": {
@@ -3102,7 +3695,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File"
           }
         },
@@ -3129,9 +3722,16 @@
             "title": "Name"
           },
           "graduation_year": {
-            "type": "integer",
-            "maximum": 2200.0,
-            "minimum": 1900.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2200.0,
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Graduation Year"
           },
           "locations": {
@@ -3213,12 +3813,36 @@
           "parse_source": {
             "type": "string",
             "enum": [
+              "unprovided",
               "synthetic",
               "user-correction",
               "heuristic-v1"
             ],
             "title": "Parse Source",
             "default": "synthetic"
+          },
+          "field_sources": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "unprovided",
+                "synthetic",
+                "user-correction",
+                "heuristic-v1"
+              ]
+            },
+            "type": "object",
+            "title": "Field Sources"
+          },
+          "field_evidence_ids": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Field Evidence Ids"
           }
         },
         "additionalProperties": false,
@@ -4052,6 +4676,17 @@
             "type": "string",
             "title": "Import Id"
           },
+          "original_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Original Url"
+          },
+          "snapshot_sha256": {
+            "type": "string",
+            "title": "Snapshot Sha256"
+          },
           "posting": {
             "$ref": "#/components/schemas/JobPosting"
           },
@@ -4059,12 +4694,30 @@
             "type": "boolean",
             "title": "Screenshot Available",
             "default": false
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 1
+          },
+          "reviewed_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed Version"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "import_id",
+          "original_url",
+          "snapshot_sha256",
           "posting"
         ],
         "title": "ImportReceipt"
@@ -4121,6 +4774,30 @@
             ],
             "title": "Location"
           },
+          "date_posted": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Posted"
+          },
+          "valid_through": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Through"
+          },
           "requirements": {
             "items": {
               "$ref": "#/components/schemas/Requirement"
@@ -4162,6 +4839,40 @@
           "sources"
         ],
         "title": "JobPosting"
+      },
+      "JobReviewUpdate": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewedRequirement"
+            },
+            "type": "array",
+            "title": "Requirements"
+          },
+          "accept_eligibility": {
+            "type": "boolean",
+            "title": "Accept Eligibility",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version",
+          "requirements"
+        ],
+        "title": "JobReviewUpdate"
       },
       "MissionInput": {
         "properties": {
@@ -4557,6 +5268,71 @@
         ],
         "title": "OpportunityImport"
       },
+      "PasswordChange": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Current Password"
+          },
+          "new_password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "New Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange"
+      },
+      "ProfileArchiveView": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "profile_version": {
+            "type": "integer",
+            "title": "Profile Version"
+          },
+          "was_demo": {
+            "type": "boolean",
+            "title": "Was Demo"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "profile_version",
+          "was_demo",
+          "created_at"
+        ],
+        "title": "ProfileArchiveView"
+      },
       "ProfileState": {
         "properties": {
           "schema_version": {
@@ -4571,6 +5347,17 @@
           },
           "profile": {
             "$ref": "#/components/schemas/CandidateProfile"
+          },
+          "reviewed_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed Version"
           }
         },
         "additionalProperties": false,
@@ -4724,6 +5511,35 @@
           "source_id"
         ],
         "title": "ResearchClaim"
+      },
+      "ReviewedRequirement": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "required",
+              "preferred"
+            ],
+            "title": "Importance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "importance"
+        ],
+        "title": "ReviewedRequirement"
       },
       "RunView": {
         "properties": {
@@ -5106,6 +5922,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

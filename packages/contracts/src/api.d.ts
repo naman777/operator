@@ -143,6 +143,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/accounts/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Account Sessions */
+        get: operations["list_account_sessions_v1_accounts_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounts/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Account Session */
+        delete: operations["revoke_account_session_v1_accounts_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounts/sessions/revoke-others": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke Other Sessions */
+        post: operations["revoke_other_sessions_v1_accounts_sessions_revoke_others_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/accounts/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Password */
+        post: operations["change_password_v1_accounts_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspace": {
         parameters: {
             query?: never;
@@ -152,6 +220,23 @@ export interface paths {
         };
         /** Current Workspace */
         get: operations["current_workspace_v1_workspace_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Workspace */
+        get: operations["export_workspace_v1_workspace_export_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -189,6 +274,74 @@ export interface paths {
         get: operations["profile_state_v1_profile_state_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Profile */
+        post: operations["confirm_profile_v1_profile_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/archives": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile Archives */
+        get: operations["profile_archives_v1_profile_archives_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/start-fresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Fresh Profile */
+        post: operations["start_fresh_profile_v1_profile_start_fresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/profile/archives/{archive_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Profile */
+        post: operations["restore_profile_v1_profile_archives__archive_id__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -645,6 +798,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/opportunities/imports/{import_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Review Imported Job */
+        patch: operations["review_imported_job_v1_opportunities_imports__import_id__review_patch"];
+        trace?: never;
+    };
     "/v1/opportunities/imports/{import_id}/screenshot": {
         parameters: {
             query?: never;
@@ -764,6 +934,31 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+        };
+        /** AccountDeviceView */
+        AccountDeviceView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** User Agent */
+            user_agent: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Current */
+            current: boolean;
         };
         /** AccountSessionView */
         AccountSessionView: {
@@ -1025,10 +1220,7 @@ export interface components {
         };
         /** Body_upload_document_v1_profile_documents_upload_post */
         Body_upload_document_v1_profile_documents_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** CandidateProfile */
@@ -1044,7 +1236,7 @@ export interface components {
             /** Name */
             name: string;
             /** Graduation Year */
-            graduation_year: number;
+            graduation_year: number | null;
             /** Locations */
             locations: string[];
             /** Skills */
@@ -1071,7 +1263,15 @@ export interface components {
              * @default synthetic
              * @enum {string}
              */
-            parse_source: "synthetic" | "user-correction" | "heuristic-v1";
+            parse_source: "unprovided" | "synthetic" | "user-correction" | "heuristic-v1";
+            /** Field Sources */
+            field_sources?: {
+                [key: string]: "unprovided" | "synthetic" | "user-correction" | "heuristic-v1";
+            };
+            /** Field Evidence Ids */
+            field_evidence_ids?: {
+                [key: string]: string[];
+            };
         };
         /** CompanyResearch */
         CompanyResearch: {
@@ -1422,12 +1622,26 @@ export interface components {
             schema_version: "1.0";
             /** Import Id */
             import_id: string;
+            /**
+             * Original Url
+             * Format: uri
+             */
+            original_url: string;
+            /** Snapshot Sha256 */
+            snapshot_sha256: string;
             posting: components["schemas"]["JobPosting"];
             /**
              * Screenshot Available
              * @default false
              */
             screenshot_available: boolean;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
+            /** Reviewed Version */
+            reviewed_version?: number | null;
         };
         /** JobPosting */
         JobPosting: {
@@ -1452,6 +1666,10 @@ export interface components {
             url: string;
             /** Location */
             location?: string | null;
+            /** Date Posted */
+            date_posted?: string | null;
+            /** Valid Through */
+            valid_through?: string | null;
             /** Requirements */
             requirements: components["schemas"]["Requirement"][];
             eligibility_requirements?: components["schemas"]["EligibilityRequirements"] | null;
@@ -1462,6 +1680,24 @@ export interface components {
              * @default false
              */
             synthetic: boolean;
+        };
+        /** JobReviewUpdate */
+        JobReviewUpdate: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Expected Version */
+            expected_version: number;
+            /** Requirements */
+            requirements: components["schemas"]["ReviewedRequirement"][];
+            /**
+             * Accept Eligibility
+             * @default true
+             */
+            accept_eligibility: boolean;
         };
         /** MissionInput */
         MissionInput: {
@@ -1642,6 +1878,39 @@ export interface components {
              */
             url: string;
         };
+        /** PasswordChange */
+        PasswordChange: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /** ProfileArchiveView */
+        ProfileArchiveView: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /** Profile Version */
+            profile_version: number;
+            /** Was Demo */
+            was_demo: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** ProfileState */
         ProfileState: {
             /**
@@ -1653,6 +1922,8 @@ export interface components {
             /** Version */
             version: number;
             profile: components["schemas"]["CandidateProfile"];
+            /** Reviewed Version */
+            reviewed_version?: number | null;
         };
         /** ProfileUpdate */
         ProfileUpdate: {
@@ -1723,6 +1994,22 @@ export interface components {
             text: string;
             /** Source Id */
             source_id: string;
+        };
+        /** ReviewedRequirement */
+        ReviewedRequirement: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Id */
+            id: string;
+            /**
+             * Importance
+             * @enum {string}
+             */
+            importance: "required" | "preferred";
         };
         /** RunView */
         RunView: {
@@ -1868,6 +2155,10 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /** WeeklyMissionMetric */
         WeeklyMissionMetric: {
@@ -1981,7 +2272,9 @@ export interface operations {
     };
     guest_v1_guest_sessions_post: {
         parameters: {
-            query?: never;
+            query?: {
+                demo?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1995,6 +2288,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuestSession"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2127,6 +2429,130 @@ export interface operations {
             };
         };
     };
+    list_account_sessions_v1_accounts_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountDeviceView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_account_session_v1_accounts_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_other_sessions_v1_accounts_sessions_revoke_others_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_v1_accounts_password_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     current_workspace_v1_workspace_get: {
         parameters: {
             query?: never;
@@ -2145,6 +2571,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_workspace_v1_workspace_export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2231,6 +2688,138 @@ export interface operations {
                 authorization?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_profile_v1_profile_confirm_post: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    profile_archives_v1_profile_archives_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileArchiveView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_fresh_profile_v1_profile_start_fresh_post: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_profile_v1_profile_archives__archive_id__restore_post: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                archive_id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3195,6 +3784,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportReceipt"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_imported_job_v1_opportunities_imports__import_id__review_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobReviewUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

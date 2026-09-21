@@ -10,7 +10,12 @@ export default function Layout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <footer style={{ padding: "16px 24px", textAlign: "center" }}>
+          <a href="/privacy">Privacy and stored data</a>
+        </footer>
+      </body>
     </html>
   );
 }

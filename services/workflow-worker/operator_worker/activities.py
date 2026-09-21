@@ -28,7 +28,11 @@ class Activities:
     def remaining_budget(self, mission_id):
         with self.sessions() as db:
             mission = db.get(Mission, mission_id)
-            spent = db.scalar(select(func.coalesce(func.sum(ModelCall.cost_usd), 0)).where(ModelCall.mission_id == mission_id))
+            spent = db.scalar(
+                select(func.coalesce(func.sum(ModelCall.cost_usd), 0)).where(
+                    ModelCall.mission_id == mission_id
+                )
+            )
             return max(0.0, mission.budget_usd - float(spent or 0))
 
     def record_usage(self, mission_id, step, records):
@@ -60,7 +64,7 @@ class Activities:
                     "candidate_profile": profile.model_dump(mode="json"),
                     "job_posting": job.model_dump(mode="json"),
                     "steps": list(runtime.STEP_NAMES),
-                    "execution_mode": "synthetic-fixture",
+                    "execution_mode": "synthetic-fixture" if job.synthetic else "public-snapshot",
                     "job_url": state["job_url"],
                     "model_calls": 0,
                 }
@@ -134,6 +138,7 @@ class Activities:
 
             # Check for existing approval (idempotent on re-schedule).
             from sqlalchemy import select
+
             existing = db.scalar(
                 select(Approval).where(
                     Approval.mission_id == mission_id,

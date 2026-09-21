@@ -45,7 +45,7 @@ def test_approval_endpoint_persists_before_signaling_temporal(
     monkeypatch.setattr(main_module, "_get_temporal_client", get_temporal_client)
 
     with TestClient(create_app(url)) as client:
-        guest = client.post("/v1/guest-sessions").json()
+        guest = client.post("/v1/guest-sessions?demo=true").json()
         headers = {"Authorization": f"Bearer {guest['token']}"}
         mission = client.post(
             "/v1/missions",
@@ -65,7 +65,7 @@ def test_approval_endpoint_persists_before_signaling_temporal(
                 )
             )
 
-        other_token = client.post("/v1/guest-sessions").json()["token"]
+        other_token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         isolated = client.post(
             f"/v1/approvals/{approval_id}/{decision}",
             headers={"Authorization": f"Bearer {other_token}"},
@@ -113,7 +113,7 @@ def test_approved_workflow_transition_remains_api_serializable(tmp_path):
     engine, sessions = database(url)
 
     with TestClient(create_app(url)) as client:
-        guest = client.post("/v1/guest-sessions").json()
+        guest = client.post("/v1/guest-sessions?demo=true").json()
         headers = {"Authorization": f"Bearer {guest['token']}"}
         mission = client.post(
             "/v1/missions",

@@ -27,21 +27,31 @@ def cosine(left, right) -> float:
     return sum(float(a) * float(b) for a, b in zip(left, right))
 
 
-def relevant_ids(db, workspace_id: str, queries: list[str], limit_per_query: int = 5) -> list[str]:
-    if not queries:
+def relevant_ids(
+    db,
+    workspace_id: str,
+    queries: list[str],
+    limit_per_query: int = 5,
+    allowed_ids: set[str] | None = None,
+) -> list[str]:
+    if not queries or allowed_ids == set():
         return []
     ids = []
     if db.bind.dialect.name == "postgresql":
         for query in queries:
+            statement = select(EvidenceChunk.id).where(EvidenceChunk.workspace_id == workspace_id)
+            if allowed_ids is not None:
+                statement = statement.where(EvidenceChunk.id.in_(allowed_ids))
             rows = db.scalars(
-                select(EvidenceChunk.id)
-                .where(EvidenceChunk.workspace_id == workspace_id)
-                .order_by(EvidenceChunk.embedding.cosine_distance(embed(query)))
-                .limit(limit_per_query)
+                statement.order_by(EvidenceChunk.embedding.cosine_distance(embed(query))).limit(
+                    limit_per_query
+                )
             ).all()
             ids.extend(rows)
     else:
         rows = db.scalars(select(EvidenceChunk).where(EvidenceChunk.workspace_id == workspace_id)).all()
+        if allowed_ids is not None:
+            rows = [row for row in rows if row.id in allowed_ids]
         for query in queries:
             vector = embed(query)
             ranked = sorted(rows, key=lambda row: cosine(row.embedding, vector), reverse=True)

@@ -57,7 +57,7 @@ async def run_scenarios(tmp_path):
     api_main._TEMPORAL_CLIENT = temporal
     try:
         with TestClient(create_app(url)) as api, ThreadPoolExecutor(max_workers=4) as executor:
-            token = api.post("/v1/guest-sessions").json()["token"]
+            token = api.post("/v1/guest-sessions?demo=true").json()["token"]
             headers = {"Authorization": f"Bearer {token}"}
 
             def create(mode=None):

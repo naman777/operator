@@ -2,12 +2,15 @@
 import { useEffect, useState } from "react";
 import { RunInspector } from "./run-inspector";
 import { ProfileEditor } from "./profile-editor";
+import { AccountSecurity } from "./account-security";
 import { JobImporter } from "./job-importer";
 import { request } from "../lib/api";
 import type { components } from "@operator/contracts";
 type Mission = components["schemas"]["MissionView"];
 type Job = components["schemas"]["JobPosting"];
 type Profile = components["schemas"]["CandidateProfile"];
+type ProfileState = components["schemas"]["ProfileState"];
+type Workspace = components["schemas"]["WorkspaceView"];
 type Application = components["schemas"]["ApplicationView"];
 type Approval = components["schemas"]["ApprovalView"];
 type EvalRun = components["schemas"]["EvalRunView"];
@@ -57,6 +60,7 @@ export default function Home() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileReviewed, setProfileReviewed] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [evalRuns, setEvalRuns] = useState<EvalRun[]>([]);
@@ -77,6 +81,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accountSession, setAccountSession] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   async function api<T>(
     path: string,
@@ -105,18 +110,21 @@ export default function Home() {
     return response.json();
   }
   async function load(session: string) {
-    const [m, j, p, apps, apv, evals, operations] = await Promise.all([
+    const [ws, m, j, p, apps, apv, evals, operations] = await Promise.all([
+      api<Workspace>("/v1/workspace", session),
       api<Mission[]>("/v1/missions", session),
       api<Job[]>("/v1/demo/jobs", session),
-      api<Profile>("/v1/profile", session),
+      api<ProfileState>("/v1/profile/state", session),
       api<Application[]>("/v1/applications", session),
       api<Approval[]>("/v1/approvals", session),
       api<EvalRun[]>("/v1/evals/runs", session),
       api<Observability>("/v1/observability/summary", session),
     ]);
+    setDemoMode(ws.is_demo);
     setMissions(m);
     setJobs(j);
-    setProfile(p);
+    setProfile(p.profile);
+    setProfileReviewed(p.reviewed_version === p.version);
     setApplications(apps);
     setApprovals(apv);
     setEvalRuns(evals);
@@ -163,18 +171,21 @@ export default function Home() {
       clearInterval(timer);
     };
   }, [token, selected]);
-  async function enter() {
+  async function enter(demo: boolean) {
     setBusy(true);
     setError("");
     try {
       const data = await api<components["schemas"]["GuestSession"]>(
-        "/v1/guest-sessions",
+        `/v1/guest-sessions?demo=${demo}`,
         "",
         { method: "POST" },
       );
       localStorage.setItem("operator-session", data.token);
+      localStorage.removeItem("operator-account");
+      setAccountSession(false);
       setToken(data.token);
       await load(data.token);
+      setScreen(demo ? "Mission Control" : "Candidate Profile");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -312,7 +323,11 @@ export default function Home() {
         <div className="workspace">
           <span className="avatar">G</span>
           <div>
-            Guest workspace<small>Synthetic data · Private session</small>
+            {accountSession ? "Account workspace" : "Guest workspace"}
+            <small>
+              {demoMode ? "Guided demo data" : "Your own data"} - Private
+              session
+            </small>
           </div>
         </div>
         <p className="nav-label">WORKSPACE</p>
@@ -335,8 +350,8 @@ export default function Home() {
           ))}
         </nav>
         <div className="aside-bottom">
-          <span className="dot" /> Workflow preview
-          <small>v0.1 · Local development</small>
+          <span className="dot" /> Workflow status
+          <small>Production - Review before action</small>
         </div>
       </aside>
       <main>
@@ -345,7 +360,9 @@ export default function Home() {
             Workspace <span className="slash">/</span>{" "}
             {selected ? "Run Inspector" : screen}
           </span>
-          <span className="tag">GUEST DEMO</span>
+          <span className="tag">
+            {demoMode ? "GUIDED DEMO" : "REAL-DATA WORKSPACE"}
+          </span>
         </header>
         <div className="content">
           <div className="heading">
@@ -365,7 +382,8 @@ export default function Home() {
               </p>
             </div>
             <span className="pill">
-              <span className="dot" /> Sample execution
+              <span className="dot" />{" "}
+              {demoMode ? "Sample execution" : "Source-backed execution"}
             </span>
           </div>
           {error && (
@@ -383,31 +401,43 @@ export default function Home() {
                 <br />A better next move.
               </h2>
               <p>
-                Explore a synthetic candidate and three sample roles. Save a
-                mission and inspect its audit trail, without connecting any
-                private accounts.
+                Start with your own resume and an imported job, or explore the
+                guided demo with clearly labeled sample data.
               </p>
-              <div className="demo-steps" aria-label="Guided demo steps">
+              <div className="demo-steps" aria-label="How it works">
                 <div>
                   <span>1</span>
-                  <strong>Open a private guest workspace</strong>
-                  <small>No signup or external account is required.</small>
+                  <strong>Open a private workspace</strong>
+                  <small>Choose your own data or the guided demo.</small>
                 </div>
                 <div>
                   <span>2</span>
-                  <strong>Run a seeded opportunity mission</strong>
+                  <strong>Add evidence and choose a role</strong>
                   <small>
-                    Watch durable research, matching, and verification.
+                    Upload a resume and import a supported job page.
                   </small>
                 </div>
                 <div>
                   <span>3</span>
-                  <strong>Inspect evidence and approvals</strong>
-                  <small>Every claim stays linked to a stored source.</small>
+                  <strong>Review the workflow</strong>
+                  <small>
+                    Inspect cited results and approve the next step.
+                  </small>
                 </div>
               </div>
-              <button className="primary" disabled={busy} onClick={enter}>
-                {busy ? "Opening…" : "Start guided demo →"}
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => enter(false)}
+              >
+                Start with my own data
+              </button>
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() => enter(true)}
+              >
+                Start guided demo
               </button>
               <form
                 className="account-form"
@@ -450,6 +480,26 @@ export default function Home() {
             />
           ) : screen === "Mission Control" ? (
             <>
+              {accountSession && (
+                <AccountSecurity
+                  token={token}
+                  onSignOut={() => {
+                    localStorage.removeItem("operator-session");
+                    localStorage.removeItem("operator-account");
+                    sessionStorage.removeItem("operator-pending-mission");
+                    setToken("");
+                    setAccountSession(false);
+                    setSelected(null);
+                    setMissions([]);
+                    setJobs([]);
+                    setProfile(null);
+                    setApplications([]);
+                    setApprovals([]);
+                    setEvalRuns([]);
+                    setObservability(null);
+                  }}
+                />
+              )}
               {!accountSession && (
                 <section className="panel account-form">
                   <h2>Keep this workspace</h2>
@@ -480,6 +530,22 @@ export default function Home() {
                   </button>
                 </section>
               )}
+              {!demoMode &&
+                (!profile?.name.trim() ||
+                  !profile.evidence.length ||
+                  profile.synthetic ||
+                  !profileReviewed) && (
+                  <section className="notice">
+                    Add your own resume evidence and review your profile before
+                    running a mission.
+                    <button
+                      className="secondary"
+                      onClick={() => setScreen("Candidate Profile")}
+                    >
+                      Set up my profile
+                    </button>
+                  </section>
+                )}
               <div className="stats">
                 <div>
                   <small>SAVED MISSIONS</small>
@@ -487,14 +553,20 @@ export default function Home() {
                   <span>Persisted in your workspace</span>
                 </div>
                 <div>
-                  <small>SAMPLE OPPORTUNITIES</small>
-                  <strong>03</strong>
-                  <span>Ready to explore</span>
+                  <small>
+                    {demoMode ? "SAMPLE OPPORTUNITIES" : "PROFILE EVIDENCE"}
+                  </small>
+                  <strong>
+                    {demoMode ? jobs.length : (profile?.evidence.length ?? 0)}
+                  </strong>
+                  <span>
+                    {demoMode ? "Ready to explore" : "Source excerpts saved"}
+                  </span>
                 </div>
                 <div>
                   <small>EXECUTION STATUS</small>
                   <strong className="stat-text">Temporal</strong>
-                  <span>Durable sample workflow</span>
+                  <span>Durable workflow</span>
                 </div>
               </div>
               <div className="two-col">
@@ -504,7 +576,9 @@ export default function Home() {
                     <span className="subtle">01 / CREATE A DRAFT</span>
                   </div>
                   <p className="muted">
-                    Choose a sample, or save a public job URL for a future run.
+                    {demoMode
+                      ? "Choose a sample, or import a public job page."
+                      : "Import a supported public job page in Opportunities, then save a mission."}
                   </p>
                   <form onSubmit={create}>
                     <label htmlFor="job">Job URL</label>
@@ -516,17 +590,19 @@ export default function Home() {
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://company.com/careers/role"
                     />
-                    <div className="samples">
-                      {jobs.map((j) => (
-                        <button
-                          type="button"
-                          key={j.id}
-                          onClick={() => setUrl(j.url)}
-                        >
-                          {j.company} ↗
-                        </button>
-                      ))}
-                    </div>
+                    {demoMode && (
+                      <div className="samples">
+                        {jobs.map((j) => (
+                          <button
+                            type="button"
+                            key={j.id}
+                            onClick={() => setUrl(j.url)}
+                          >
+                            {j.company} ↗
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <label htmlFor="goal">Mission goal</label>
                     <textarea
                       id="goal"
@@ -611,46 +687,51 @@ export default function Home() {
             <>
               <JobImporter
                 token={token}
+                demoMode={demoMode}
                 onSelect={(value) => {
                   setUrl(value);
                   setScreen("Mission Control");
                 }}
               />
-              <div className="notice">
-                These are synthetic fixtures, not real vacancies. Completed
-                analyses create a saved pipeline entry.
-              </div>
-              <div className="job-grid">
-                {jobs.map((j) => (
-                  <section className="panel" key={j.id}>
-                    <span className="avatar">{j.company[0]}</span>
-                    <p className="eyebrow">{j.company}</p>
-                    <h2>{j.title}</h2>
-                    <p className="muted">{j.location}</p>
-                    <div className="samples">
-                      {j.requirements.map((r) => (
-                        <span className="tag" key={r.id}>
-                          {r.text}
-                        </span>
-                      ))}
-                    </div>
-                    <blockquote>{j.sources[0]?.excerpt}</blockquote>
-                    <small>Source: {j.sources[0]?.title}</small>
-                    <button
-                      className="primary full"
-                      onClick={() => {
-                        setUrl(j.url);
-                        setScreen("Mission Control");
-                      }}
-                    >
-                      Use this sample →
-                    </button>
-                  </section>
-                ))}
-              </div>
+              {demoMode && (
+                <div className="notice">
+                  These are synthetic fixtures, not real vacancies. Completed
+                  analyses create a saved pipeline entry.
+                </div>
+              )}
+              {demoMode && (
+                <div className="job-grid">
+                  {jobs.map((j) => (
+                    <section className="panel" key={j.id}>
+                      <span className="avatar">{j.company[0]}</span>
+                      <p className="eyebrow">{j.company}</p>
+                      <h2>{j.title}</h2>
+                      <p className="muted">{j.location}</p>
+                      <div className="samples">
+                        {j.requirements.map((r) => (
+                          <span className="tag" key={r.id}>
+                            {r.text}
+                          </span>
+                        ))}
+                      </div>
+                      <blockquote>{j.sources[0]?.excerpt}</blockquote>
+                      <small>Source: {j.sources[0]?.title}</small>
+                      <button
+                        className="primary full"
+                        onClick={() => {
+                          setUrl(j.url);
+                          setScreen("Mission Control");
+                        }}
+                      >
+                        Use this sample →
+                      </button>
+                    </section>
+                  ))}
+                </div>
+              )}
             </>
           ) : screen === "Candidate Profile" ? (
-            <ProfileEditor token={token} />
+            <ProfileEditor token={token} onUpdated={() => load(token)} />
           ) : screen === "Application Pipeline" ? (
             <>
               <div className="stats">

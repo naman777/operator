@@ -26,6 +26,13 @@ class Base(DeclarativeBase):
     pass
 
 
+class RateLimitBucket(Base):
+    __tablename__ = "rate_limit_buckets"
+    key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    count: Mapped[int] = mapped_column(Integer)
+    expires_at: Mapped[int] = mapped_column(Integer, index=True)
+
+
 class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -41,6 +48,7 @@ class AccountSession(Base):
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
     token_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    user_agent: Mapped[str | None] = mapped_column(String(512), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -214,6 +222,17 @@ class StoredProfile(Base):
     workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), primary_key=True)
     content: Mapped[dict] = mapped_column(JSON)
     version: Mapped[int] = mapped_column(Integer, default=1)
+    reviewed_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class ProfileArchive(Base):
+    __tablename__ = "profile_archives"
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), index=True)
+    content: Mapped[dict] = mapped_column(JSON)
+    profile_version: Mapped[int] = mapped_column(Integer)
+    was_demo: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class ProfileDocument(Base):
@@ -247,6 +266,8 @@ class ImportedJob(Base):
     posting: Mapped[dict] = mapped_column(JSON)
     snapshot: Mapped[str] = mapped_column(String)
     screenshot: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    reviewed_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

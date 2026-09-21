@@ -16,7 +16,7 @@ def client(database_url):
 
 
 def guest(client):
-    response = client.post("/v1/guest-sessions")
+    response = client.post("/v1/guest-sessions?demo=true")
     assert response.status_code == 201
     return {"Authorization": "Bearer " + response.json()["token"]}
 

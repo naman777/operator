@@ -5,7 +5,7 @@ from operator_api.main import create_app
 
 
 def session(client):
-    token = client.post("/v1/guest-sessions").json()["token"]
+    token = client.post("/v1/guest-sessions?demo=true").json()["token"]
     return {"Authorization": f"Bearer {token}"}
 
 

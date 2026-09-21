@@ -11,7 +11,7 @@ import socket
 import ssl
 import time
 from urllib.parse import urljoin, urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
 from .db import utcnow
 from .schemas import EligibilityRequirements, JobPosting, Requirement, Source
 
@@ -95,6 +95,109 @@ def fetch(url):
     raise ValueError("Job page exceeded the redirect limit")
 
 
+def ashby_target(url):
+    """Return the board and posting ID only for an Ashby job-detail URL."""
+    parts = urlsplit(url)
+    if parts.hostname != "jobs.ashbyhq.com":
+        return None
+    segments = parts.path.strip("/").split("/")
+    if (
+        parts.scheme != "https"
+        or parts.port not in (None, 443)
+        or parts.username
+        or parts.password
+        or len(segments) != 2
+        or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", segments[0])
+    ):
+        raise ValueError("Use a public Ashby job-detail URL with a board and posting ID.")
+    try:
+        posting_id = str(UUID(segments[1]))
+    except ValueError as exc:
+        raise ValueError("Use a public Ashby job-detail URL with a board and posting ID.") from exc
+    return segments[0], posting_id
+
+
+def fetch_ashby(url):
+    """Use Ashby's read-only public board API without loading cross-origin browser assets."""
+    target = ashby_target(url)
+    if target is None:
+        raise ValueError("This is not an Ashby job-detail URL.")
+    board, posting_id = target
+    api_url = f"https://api.ashbyhq.com/posting-api/job-board/{board}"
+    parts, address = public_target(api_url)
+    connection = PinnedHTTPS(parts.hostname, address, 8)
+    try:
+        connection.request(
+            "GET",
+            parts.path,
+            headers={
+                "Accept": "application/json",
+                "Accept-Encoding": "identity",
+                "User-Agent": "Operator/0.1",
+            },
+        )
+        response = connection.getresponse()
+        if response.status != 200:
+            raise ValueError(f"Ashby public job board returned HTTP {response.status}.")
+        if "application/json" not in (response.getheader("Content-Type") or "").casefold():
+            raise ValueError("Ashby public job board did not return JSON.")
+        if (response.getheader("Content-Encoding") or "identity") != "identity":
+            raise ValueError("Compressed Ashby responses are not supported.")
+        raw = response.read(MAX_BYTES + 1)
+        if len(raw) > MAX_BYTES:
+            raise ValueError("Ashby public job board exceeds the 2 MB limit.")
+    finally:
+        connection.close()
+    try:
+        board_data = json.loads(raw)
+    except (ValueError, RecursionError) as exc:
+        raise ValueError("Ashby public job board returned invalid JSON.") from exc
+    jobs = board_data.get("jobs") if isinstance(board_data, dict) else None
+    if not isinstance(jobs, list) or len(jobs) > 1000:
+        raise ValueError("Ashby public job board has an invalid job list.")
+    matches = []
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        try:
+            if ashby_target(job.get("jobUrl", "")) == target:
+                matches.append(job)
+        except (TypeError, ValueError):
+            continue
+    if len(matches) != 1:
+        raise ValueError("Ashby posting is not currently published on this public board.")
+    job = matches[0]
+    title = plain(job.get("title"))
+    description = job.get("descriptionHtml")
+    if not title or not isinstance(description, str) or not plain(description):
+        raise ValueError("Ashby posting has no public title or description.")
+    snapshot = json.dumps(
+        {"apiVersion": board_data.get("apiVersion"), "job": job},
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    sid = "source-" + hashlib.sha256(snapshot.encode()).hexdigest()[:20]
+    requirements = description_requirements(description, sid)
+    source = Source(
+        id=sid,
+        url=api_url,
+        title=title,
+        excerpt=(plain(description)[:20000] + "\n" + "\n".join(item.text for item in requirements)),
+        retrieved_at=utcnow(),
+    )
+    posting = JobPosting(
+        id=str(uuid4()),
+        title=title,
+        company=board,
+        url=url,
+        location=plain(job.get("location")) or None,
+        date_posted=_parse_iso_date(job.get("publishedAt")),
+        requirements=requirements,
+        sources=[source],
+    )
+    return url, snapshot, posting
+
+
 class PageParser(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -122,6 +225,95 @@ class TextParser(HTMLParser):
 
     def handle_data(self, text):
         self.text.append(text)
+
+
+class DescriptionRequirementsParser(HTMLParser):
+    """Read list items only under explicit requirement headings in JSON-LD descriptions."""
+
+    REQUIRED = {
+        "requirements",
+        "requirement",
+        "qualifications",
+        "qualification",
+        "must have",
+        "what we're looking for",
+    }
+    PREFERRED = {
+        "preferred qualifications",
+        "nice to have",
+        "bonus points",
+        "you may be a good fit if you also",
+    }
+    HEADING_TAGS = {"b", "strong", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+    def __init__(self):
+        super().__init__()
+        self.heading_tag = None
+        self.heading_text = []
+        self.importance = None
+        self.in_list = False
+        self.item = None
+        self.paragraph = None
+        self.items = []
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.casefold()
+        if tag in self.HEADING_TAGS and not self.in_list and self.paragraph is None:
+            self.heading_tag = tag
+            self.heading_text = []
+        elif tag == "ul" and self.importance and not self.in_list:
+            self.in_list = True
+        elif tag == "li" and self.in_list:
+            self.item = []
+        elif tag == "p" and self.importance and not self.in_list and self.heading_tag is None:
+            self.paragraph = []
+
+    def handle_data(self, text):
+        if self.heading_tag:
+            self.heading_text.append(text)
+        if self.item is not None:
+            self.item.append(text)
+        if self.paragraph is not None:
+            self.paragraph.append(text)
+
+    def handle_endtag(self, tag):
+        tag = tag.casefold()
+        if tag == self.heading_tag:
+            label = " ".join(" ".join(self.heading_text).casefold().split()).rstrip(":")
+            self.importance = (
+                "required" if label in self.REQUIRED else "preferred" if label in self.PREFERRED else None
+            )
+            self.heading_tag = None
+        elif tag == "li" and self.item is not None:
+            value = " ".join(" ".join(self.item).split())
+            if value and len(self.items) < 30:
+                self.items.append((value[:2000], self.importance))
+            self.item = None
+        elif tag == "p" and self.paragraph is not None:
+            value = " ".join(" ".join(self.paragraph).split())
+            if value and len(self.items) < 30:
+                self.items.append((value[:2000], self.importance))
+            self.paragraph = None
+        elif tag == "ul" and self.in_list:
+            self.in_list = False
+            self.importance = None
+
+
+def description_requirements(description, source_id):
+    if not isinstance(description, str):
+        return []
+    parser = DescriptionRequirementsParser()
+    parser.feed(description[:50000])
+    return [
+        Requirement(
+            id=hashlib.sha256(("description" + text).encode()).hexdigest()[:20],
+            text=text,
+            category="skill",
+            importance=importance,
+            source_id=source_id,
+        )
+        for text, importance in parser.items
+    ]
 
 
 def plain(value):
@@ -302,6 +494,8 @@ def parse(url, html):
                         id=rid, text=text[:2000], category=category, importance="required", source_id=sid
                     )
                 )
+    if not requirements:
+        requirements = description_requirements(posting.get("description"), sid)
     # Keep explicit excerpts for each requirement; the raw snapshot remains available.
     source.excerpt += "\n" + "\n".join(requirement.text for requirement in requirements)
     location = None
@@ -319,6 +513,8 @@ def parse(url, html):
         company_url=company_url,
         url=url,
         location=location,
+        date_posted=_parse_iso_date(posting.get("datePosted")),
+        valid_through=_parse_iso_date(posting.get("validThrough")),
         requirements=list({r.id: r for r in requirements}.values()),
         eligibility_requirements=eligibility_requirements,
         sources=[source],

@@ -10,7 +10,7 @@ import httpx
 def main():
     with httpx.Client(base_url=os.getenv("OPERATOR_WEB_URL", "http://127.0.0.1:3000"), timeout=45) as client:
         assert client.get("/").status_code == 200
-        response = client.post("/api/v1/guest-sessions")
+        response = client.post("/api/v1/guest-sessions?demo=true")
         response.raise_for_status()
         headers = {"Authorization": "Bearer " + response.json()["token"]}
 
@@ -43,9 +43,7 @@ def main():
                 if status == "awaiting_approval":
                     response = client.get("/api/v1/approvals?status=pending", headers=headers)
                     response.raise_for_status()
-                    approval = next(
-                        (item for item in response.json() if item["mission_id"] == mid), None
-                    )
+                    approval = next((item for item in response.json() if item["mission_id"] == mid), None)
                     if approval is None:
                         time.sleep(0.25)
                         continue

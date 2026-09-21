@@ -93,7 +93,7 @@ def _app(tmp_path):
 
 
 def _guest(client):
-    return {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+    return {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
 
 
 # ---------------------------------------------------------------------------

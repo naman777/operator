@@ -14,7 +14,7 @@ def setup(tmp_path):
     url = f"sqlite:///{tmp_path / 'runtime.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "artifacts-test-0001"}
         mission = client.post(
             "/v1/missions", headers=headers, json={"job_url": "https://example.com/jobs/1"}
@@ -73,7 +73,7 @@ def test_artifacts_generation_provenance_and_isolation(setup):
     assert applications[0]["company"] == "Northstar"
     assert applications[0]["title"] == inputs["extracting"]["title"]
     assert client.get(f"/v1/artifacts/{data[0]['id']}", headers=headers).status_code == 200
-    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
     assert client.get(f"/v1/missions/{mid}/artifacts", headers=other).status_code == 404
     assert client.get(f"/v1/artifacts/{data[0]['id']}", headers=other).status_code == 404
     assert client.get(f"/v1/artifacts/{data[0]['id']}").status_code == 401
@@ -125,7 +125,7 @@ def test_model_call_audit_is_workspace_scoped(setup):
     response = client.get(f"/v1/missions/{mid}/model-calls", headers=headers)
     assert response.status_code == 200
     assert response.json()[0]["cost_usd"] == 0.001
-    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
     assert client.get(f"/v1/missions/{mid}/model-calls", headers=other).status_code == 404
 
 
@@ -172,7 +172,7 @@ def test_concurrent_missions_share_workspace_application_but_not_artifacts(setup
         assert len(db.scalars(select(Opportunity)).all()) == 1
         assert len(db.scalars(select(Artifact)).all()) == 8
     other = {
-        "Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"],
+        "Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"],
         "Idempotency-Key": "other-workspace-mission",
     }
     third = client.post("/v1/missions", headers=other, json={"job_url": "https://example.com/jobs/1"}).json()[

@@ -106,7 +106,7 @@ def start_mission(db, mission_id, retry=False):
     expected = "failed" if retry else "draft"
     if mission.status != expected:
         raise StateConflict(f"Only {expected} missions can be {'retried' if retry else 'started'}.")
-    load_job(db, mission)
+    job = load_job(db, mission)
     run = db.get(MissionRun, mission_id)
     if run is None:
         run = MissionRun(mission_id=mission_id, run_number=1, failure_remaining=0)
@@ -131,7 +131,11 @@ def start_mission(db, mission_id, retry=False):
         db,
         mission,
         "mission.queued",
-        {"run_number": run.run_number, "retry": retry, "execution_mode": "synthetic-fixture"},
+        {
+            "run_number": run.run_number,
+            "retry": retry,
+            "execution_mode": "synthetic-fixture" if job.synthetic else "public-snapshot",
+        },
     )
     return mission
 
@@ -196,9 +200,11 @@ def run_view(db, mission):
         "steps": views,
         "result": run.result if run else None,
         "execution_mode": "public-snapshot"
-        if any(
-            view["name"] == "extracting" and view["output"] and not view["output"].get("synthetic", True)
-            for view in views
+        if db.scalar(
+            select(ImportedJob.id).where(
+                ImportedJob.workspace_id == mission.workspace_id,
+                ImportedJob.original_url == mission.job_url,
+            )
         )
         else "synthetic-fixture",
     }

@@ -83,6 +83,8 @@ class JobPosting(Contract):
     company_url: HttpUrl | None = None
     url: HttpUrl
     location: str | None = None
+    date_posted: date | None = None
+    valid_through: date | None = None
     requirements: list[Requirement]
     eligibility_requirements: EligibilityRequirements | None = None
     sources: list[Source]
@@ -100,7 +102,7 @@ class Evidence(Contract):
 class CandidateProfile(Contract):
     id: str
     name: str
-    graduation_year: int = Field(ge=1900, le=2200)
+    graduation_year: int | None = Field(ge=1900, le=2200)
     locations: list[str]
     skills: list[str]
     work_authorization: list[str] = Field(default_factory=list)
@@ -111,7 +113,11 @@ class CandidateProfile(Contract):
     evidence: list[Evidence]
     synthetic: bool = False
     # Records where structured fields (graduation_year, experience_years) were last set from.
-    parse_source: Literal["synthetic", "user-correction", "heuristic-v1"] = "synthetic"
+    parse_source: Literal["unprovided", "synthetic", "user-correction", "heuristic-v1"] = "synthetic"
+    field_sources: dict[str, Literal["unprovided", "synthetic", "user-correction", "heuristic-v1"]] = Field(
+        default_factory=dict
+    )
+    field_evidence_ids: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class RequirementMatch(Contract):
@@ -188,6 +194,19 @@ class AccountSessionView(Contract):
     account: AccountView
     workspace: WorkspaceView
     expires_at: datetime
+
+
+class AccountDeviceView(Contract):
+    id: str
+    user_agent: str | None
+    created_at: datetime
+    expires_at: datetime
+    current: bool
+
+
+class PasswordChange(Contract):
+    current_password: str = Field(min_length=12, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 class MissionView(MissionInput):
@@ -337,6 +356,14 @@ class ProfileUpdate(Contract):
 class ProfileState(Contract):
     version: int
     profile: CandidateProfile
+    reviewed_version: int | None = None
+
+
+class ProfileArchiveView(Contract):
+    id: str
+    profile_version: int
+    was_demo: bool
+    created_at: datetime
 
 
 class DocumentInput(Contract):
@@ -356,14 +383,27 @@ class OpportunityImport(Contract):
 
 class ImportReceipt(Contract):
     import_id: str
+    original_url: HttpUrl
+    snapshot_sha256: str
     posting: JobPosting
     screenshot_available: bool = False
+    version: int = 1
+    reviewed_version: int | None = None
+
+
+class ReviewedRequirement(Contract):
+    id: str
+    importance: Literal["required", "preferred"]
+
+
+class JobReviewUpdate(Contract):
+    expected_version: int = Field(ge=1)
+    requirements: list[ReviewedRequirement]
+    accept_eligibility: bool = True
 
 
 class EvalRunRequest(Contract):
-    dataset_version: Literal["opportunity-v1", "opportunity-v2", "opportunity-v3"] = (
-        "opportunity-v3"
-    )
+    dataset_version: Literal["opportunity-v1", "opportunity-v2", "opportunity-v3"] = "opportunity-v3"
 
 
 class EvalMetrics(Contract):

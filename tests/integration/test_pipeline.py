@@ -10,7 +10,7 @@ def make_client(tmp_path, name="test"):
 
 def test_applications_empty_on_fresh_workspace(tmp_path):
     with make_client(tmp_path, "app_empty") as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}"}
         resp = client.get("/v1/applications", headers=headers)
         assert resp.status_code == 200
@@ -19,14 +19,14 @@ def test_applications_empty_on_fresh_workspace(tmp_path):
 
 def test_guest_session_includes_expiry(tmp_path):
     with make_client(tmp_path, "expiry") as client:
-        data = client.post("/v1/guest-sessions").json()
+        data = client.post("/v1/guest-sessions?demo=true").json()
         assert "expires_at" in data["workspace"]
         assert data["workspace"]["expires_at"] is not None
 
 
 def test_approvals_empty_and_auth_required(tmp_path):
     with make_client(tmp_path, "approvals") as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}"}
         resp = client.get("/v1/approvals", headers=headers)
         assert resp.status_code == 200
@@ -36,7 +36,7 @@ def test_approvals_empty_and_auth_required(tmp_path):
 
 def test_guest_session_reset_issues_new_token(tmp_path):
     with make_client(tmp_path, "reset") as client:
-        original = client.post("/v1/guest-sessions").json()["token"]
+        original = client.post("/v1/guest-sessions?demo=true").json()["token"]
         orig_headers = {"Authorization": f"Bearer {original}"}
         reset = client.post("/v1/guest-sessions/reset", headers=orig_headers).json()
         new_token = reset["token"]
@@ -56,7 +56,7 @@ def test_application_stage_patch(tmp_path):
 
     db_url = f"sqlite:///{tmp_path / 'stage.db'}"
     with make_client(tmp_path, "stage") as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         ws_data = client.get("/v1/workspace", headers={"Authorization": f"Bearer {token}"}).json()
         ws_id = ws_data["id"]
         headers = {"Authorization": f"Bearer {token}"}
@@ -111,7 +111,7 @@ def test_application_stage_patch(tmp_path):
         )
 
         # Other workspace cannot access.
-        other = client.post("/v1/guest-sessions").json()["token"]
+        other = client.post("/v1/guest-sessions?demo=true").json()["token"]
         assert (
             client.patch(
                 f"/v1/applications/{app_id}",

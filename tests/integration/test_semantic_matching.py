@@ -203,7 +203,7 @@ def test_fixture_skill_exact_match_still_works(tmp_path):
     """The existing fixture workflow (exact skill in evidence.skills) must still pass."""
     url = f"sqlite:///{tmp_path / 'sem.db'}"
     with TestClient(create_app(url)) as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "sem-fixture-001"}
         # Ingest evidence with explicit Python skill tag
         client.post(

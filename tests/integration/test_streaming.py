@@ -5,7 +5,7 @@ from operator_api.main import create_app
 
 def test_stream_replays_committed_events_and_last_event_id(tmp_path):
     with TestClient(create_app(f"sqlite:///{tmp_path / 'stream.db'}")) as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "stream-test-0001"}
         mid = client.post(
             "/v1/missions", headers=headers, json={"job_url": "https://example.com/jobs/1"}
@@ -29,5 +29,5 @@ def test_stream_replays_committed_events_and_last_event_id(tmp_path):
         assert client.get(path, headers={**headers, "Last-Event-ID": "-1"}).status_code == 422
         assert client.get(path + "?after=-1", headers=headers).status_code == 422
         assert client.get(path).status_code == 401
-        other = client.post("/v1/guest-sessions").json()["token"]
+        other = client.post("/v1/guest-sessions?demo=true").json()["token"]
         assert client.get(path, headers={"Authorization": f"Bearer {other}"}).status_code == 404

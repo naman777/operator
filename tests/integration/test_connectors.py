@@ -6,7 +6,7 @@ from operator_api.main import create_app
 
 
 def setup(client):
-    token = client.post("/v1/guest-sessions").json()["token"]
+    token = client.post("/v1/guest-sessions?demo=true").json()["token"]
     headers = {"Authorization": f"Bearer {token}"}
     mission = client.post(
         "/v1/missions",
@@ -102,7 +102,7 @@ def test_calendar_validation_rejection_and_workspace_isolation(tmp_path):
         ).status_code == 200
         assert client.get("/v1/actions", headers=headers).json() == []
 
-        other = client.post("/v1/guest-sessions").json()["token"]
+        other = client.post("/v1/guest-sessions?demo=true").json()["token"]
         other_headers = {"Authorization": f"Bearer {other}"}
         assert client.get("/v1/actions", headers=other_headers).json() == []
         assert client.patch(

@@ -282,6 +282,32 @@
       "default": null,
       "title": "Location"
     },
+    "date_posted": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Date Posted"
+    },
+    "valid_through": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Valid Through"
+    },
     "requirements": {
       "items": {
         "$ref": "#/$defs/Requirement"

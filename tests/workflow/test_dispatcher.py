@@ -13,7 +13,7 @@ def test_outage_and_duplicate_delivery_are_recoverable(tmp_path):
     url = f"sqlite:///{tmp_path / 'dispatch.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as api:
-        token = api.post("/v1/guest-sessions").json()["token"]
+        token = api.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "dispatch-mission"}
         mid = api.post(
             "/v1/missions", headers=headers, json={"job_url": "https://example.com/jobs/1"}
@@ -41,7 +41,7 @@ def test_exhausted_dispatch_is_dead_lettered_once(tmp_path):
     url = f"sqlite:///{tmp_path / 'dead-letter.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as api:
-        token = api.post("/v1/guest-sessions").json()["token"]
+        token = api.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "dead-letter-mission"}
         mid = api.post(
             "/v1/missions", headers=headers, json={"job_url": "https://example.com/jobs/1"}

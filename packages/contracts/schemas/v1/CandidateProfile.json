@@ -61,10 +61,17 @@
       "type": "string"
     },
     "graduation_year": {
-      "maximum": 2200,
-      "minimum": 1900,
-      "title": "Graduation Year",
-      "type": "integer"
+      "anyOf": [
+        {
+          "maximum": 2200,
+          "minimum": 1900,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Graduation Year"
     },
     "locations": {
       "items": {
@@ -148,12 +155,36 @@
     "parse_source": {
       "default": "synthetic",
       "enum": [
+        "unprovided",
         "synthetic",
         "user-correction",
         "heuristic-v1"
       ],
       "title": "Parse Source",
       "type": "string"
+    },
+    "field_sources": {
+      "additionalProperties": {
+        "enum": [
+          "unprovided",
+          "synthetic",
+          "user-correction",
+          "heuristic-v1"
+        ],
+        "type": "string"
+      },
+      "title": "Field Sources",
+      "type": "object"
+    },
+    "field_evidence_ids": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Field Evidence Ids",
+      "type": "object"
     }
   },
   "required": [

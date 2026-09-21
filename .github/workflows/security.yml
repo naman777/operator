@@ -1,0 +1,35 @@
+name: Dependency security audit
+on:
+  workflow_call:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m venv .audit-env
+      - run: .audit-env/bin/python -m pip install -e '.[dev]' pip-audit
+      - run: .audit-env/bin/python -m pip freeze --exclude-editable > audit-requirements.txt
+      - run: .audit-env/bin/python -m pip_audit --strict --no-deps -r audit-requirements.txt
+  javascript-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm audit

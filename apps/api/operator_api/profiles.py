@@ -73,7 +73,7 @@ def _parse_grad_year(text: str) -> int | None:
     # Prefer years in an education section if detectable
     edu_match = _EDUCATION_HEADER.search(text)
     if edu_match:
-        edu_text = text[edu_match.start():]
+        edu_text = text[edu_match.start() :]
         exp_match = _EXPERIENCE_HEADER.search(edu_text)
         edu_section = edu_text[: exp_match.start()] if exp_match else edu_text[:3000]
         section_candidates = []
@@ -96,7 +96,7 @@ def _parse_experience_years(text: str) -> float | None:
 
     # Restrict to experience section if present
     exp_match = _EXPERIENCE_HEADER.search(text)
-    region = text[exp_match.start():] if exp_match else text
+    region = text[exp_match.start() :] if exp_match else text
 
     for m in _DATE_RANGE.finditer(region):
         found_any = True
@@ -129,9 +129,26 @@ def _parse_structure(text: str) -> dict:
     return result
 
 
+def empty(workspace_id):
+    return CandidateProfile(
+        id=workspace_id,
+        name="",
+        graduation_year=None,
+        locations=[],
+        skills=[],
+        evidence=[],
+        parse_source="unprovided",
+    )
+
+
 def load(db, workspace_id, fallback):
     stored = db.get(StoredProfile, workspace_id)
-    return CandidateProfile.model_validate(stored.content) if stored else fallback()
+    if stored:
+        return CandidateProfile.model_validate(stored.content)
+    workspace = db.get(Workspace, workspace_id)
+    if workspace and workspace.is_demo:
+        return fallback()
+    return empty(workspace_id)
 
 
 def lock(db, workspace_id):
@@ -160,6 +177,7 @@ def ingest(db, workspace_id, body, fallback):
     db.add(document)
     db.flush()
     chunks = []
+    chunk_lines = {}
     for line_number, line in enumerate(body.text.splitlines(), 1):
         text = line.strip()
         if not text:
@@ -171,9 +189,11 @@ def ingest(db, workspace_id, body, fallback):
                 for skill in SKILLS
                 if re.search(r"(?<!\w)" + re.escape(skill) + r"(?!\w)", excerpt, re.I)
             ]
+            chunk_id = f"{document.id}:{line_number}:{offset}"
+            chunk_lines[chunk_id] = line_number
             chunks.append(
                 Evidence(
-                    id=f"{document.id}:{line_number}:{offset}",
+                    id=chunk_id,
                     text=excerpt,
                     document_id=document.id,
                     source_location=f"{body.name} / line {line_number} / characters {offset}-{offset + len(excerpt)}",
@@ -183,19 +203,69 @@ def ingest(db, workspace_id, body, fallback):
     if not chunks:
         raise ValueError("Document must contain non-whitespace text")
     profile.evidence.extend(chunks)
-    profile.skills = sorted(set(profile.skills) | {skill for chunk in chunks for skill in chunk.skills})
+    sources = dict(profile.field_sources)
+    field_evidence_ids = dict(profile.field_evidence_ids)
+    if sources.get("skills") != "user-correction":
+        detected = {skill for chunk in chunks for skill in chunk.skills}
+        if detected:
+            profile.skills = sorted(set(profile.skills) | detected)
+            sources["skills"] = "heuristic-v1"
+            field_evidence_ids["skills"] = [
+                item.id for item in profile.evidence if set(item.skills) & set(profile.skills)
+            ]
 
     # Apply heuristic structural fields only if they improve on the current values.
     parsed = _parse_structure(body.text)
     updated_parse_source = profile.parse_source
-    if "graduation_year" in parsed and profile.parse_source not in ("user-correction",):
-        profile = profile.model_copy(update={"graduation_year": parsed["graduation_year"]})
-        updated_parse_source = "heuristic-v1"
-    if "experience_years" in parsed and profile.experience_years is None:
-        profile = profile.model_copy(update={"experience_years": parsed["experience_years"]})
-        updated_parse_source = "heuristic-v1"
-    if updated_parse_source != profile.parse_source:
-        profile = profile.model_copy(update={"parse_source": updated_parse_source})
+    graduation_source = sources.get("graduation_year", profile.parse_source)
+    if "graduation_year" in parsed and graduation_source != "user-correction":
+        year = parsed["graduation_year"]
+        edu_match = _EDUCATION_HEADER.search(body.text)
+        exp_match = _EXPERIENCE_HEADER.search(body.text)
+        edu_start = body.text.count("\n", 0, edu_match.start()) + 1 if edu_match else None
+        edu_end = body.text.count("\n", 0, exp_match.start()) + 1 if exp_match else None
+        year_refs = [
+            item.id
+            for item in chunks
+            if any(int(match.group(1) or match.group(2)) == year for match in _GRAD_YEAR.finditer(item.text))
+        ]
+        education_refs = [
+            item_id
+            for item_id in year_refs
+            if edu_start is not None
+            and chunk_lines[item_id] >= edu_start
+            and (edu_end is None or chunk_lines[item_id] < edu_end)
+        ]
+        if education_refs:
+            year_refs = education_refs
+        if year_refs:
+            profile = profile.model_copy(update={"graduation_year": year})
+            updated_parse_source = "heuristic-v1"
+            sources["graduation_year"] = "heuristic-v1"
+            field_evidence_ids["graduation_year"] = year_refs
+    experience_source = sources.get("experience_years", profile.parse_source)
+    if (
+        "experience_years" in parsed
+        and profile.experience_years is None
+        and experience_source != "user-correction"
+    ):
+        exp_match = _EXPERIENCE_HEADER.search(body.text)
+        exp_start = body.text.count("\n", 0, exp_match.start()) + 1 if exp_match else 1
+        experience_refs = [
+            item.id for item in chunks if chunk_lines[item.id] >= exp_start and _DATE_RANGE.search(item.text)
+        ]
+        if experience_refs:
+            profile = profile.model_copy(update={"experience_years": parsed["experience_years"]})
+            updated_parse_source = "heuristic-v1"
+            sources["experience_years"] = "heuristic-v1"
+            field_evidence_ids["experience_years"] = experience_refs
+    profile = profile.model_copy(
+        update={
+            "parse_source": updated_parse_source,
+            "field_sources": sources,
+            "field_evidence_ids": field_evidence_ids,
+        }
+    )
 
     if stored:
         stored.content = profile.model_dump(mode="json")
@@ -219,10 +289,16 @@ def ingest(db, workspace_id, body, fallback):
 
 
 def retrieve(db, workspace_id, profile, requirements, limit_per_query=5):
-    ids = relevant_ids(db, workspace_id, [item.text for item in requirements], limit_per_query)
+    by_id = {item.id: item for item in profile.evidence}
+    ids = relevant_ids(
+        db,
+        workspace_id,
+        [item.text for item in requirements],
+        limit_per_query,
+        allowed_ids=set(by_id),
+    )
     if not ids:
         return profile
-    by_id = {item.id: item for item in profile.evidence}
     evidence = [by_id[item_id] for item_id in ids if item_id in by_id]
     return profile.model_copy(update={"evidence": evidence}) if evidence else profile
 
@@ -239,6 +315,36 @@ def remove_evidence(db, workspace_id, evidence_id, expected_version, fallback):
     updated = profile.model_copy(
         update={"evidence": [item for item in profile.evidence if item.id != evidence_id]}
     )
+    field_evidence_ids = {
+        field: [item_id for item_id in ids if item_id != evidence_id]
+        for field, ids in profile.field_evidence_ids.items()
+    }
+    sources = dict(profile.field_sources)
+    inferred_updates = {}
+    for field in ("graduation_year", "experience_years"):
+        if (
+            sources.get(field) == "heuristic-v1"
+            and profile.field_evidence_ids.get(field)
+            and (
+                not field_evidence_ids.get(field)
+                or (field == "experience_years" and evidence_id in profile.field_evidence_ids[field])
+            )
+        ):
+            inferred_updates[field] = None
+            sources[field] = "unprovided"
+            field_evidence_ids[field] = []
+    if sources.get("skills") == "heuristic-v1":
+        inferred_updates["skills"] = sorted({skill for item in updated.evidence for skill in item.skills})
+        field_evidence_ids["skills"] = [item.id for item in updated.evidence if item.skills]
+        if not inferred_updates["skills"]:
+            sources["skills"] = "unprovided"
+    updated = updated.model_copy(
+        update={
+            **inferred_updates,
+            "field_sources": sources,
+            "field_evidence_ids": field_evidence_ids,
+        }
+    )
     indexed = db.scalar(
         select(EvidenceChunk).where(
             EvidenceChunk.id == evidence_id, EvidenceChunk.workspace_id == workspace_id
@@ -250,8 +356,6 @@ def remove_evidence(db, workspace_id, evidence_id, expected_version, fallback):
         stored.content = updated.model_dump(mode="json")
         stored.version += 1
     else:
-        stored = StoredProfile(
-            workspace_id=workspace_id, content=updated.model_dump(mode="json"), version=1
-        )
+        stored = StoredProfile(workspace_id=workspace_id, content=updated.model_dump(mode="json"), version=1)
         db.add(stored)
     return {"profile": updated, "version": stored.version}

@@ -12,7 +12,7 @@ def setup(tmp_path):
     url = f"sqlite:///{tmp_path / 'runtime.db'}"
     engine, sessions = database(url)
     with TestClient(create_app(url)) as client:
-        token = client.post("/v1/guest-sessions").json()["token"]
+        token = client.post("/v1/guest-sessions?demo=true").json()["token"]
         headers = {"Authorization": f"Bearer {token}", "Idempotency-Key": "runtime-test-0001"}
         mission = client.post(
             "/v1/missions", headers=headers, json={"job_url": "https://example.com/jobs/1"}
@@ -67,7 +67,7 @@ def test_retry_reuses_completed_checkpoint_and_rejects_stale_run(setup):
 
 def test_controls_reject_other_workspaces_and_non_fixture_execution(setup):
     client, headers, mid, sessions = setup
-    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions").json()["token"]}
+    other = {"Authorization": "Bearer " + client.post("/v1/guest-sessions?demo=true").json()["token"]}
     for action in ("start", "retry", "cancel", "simulate-failure"):
         assert client.post(f"/v1/missions/{mid}/{action}", headers=other, json={}).status_code == 404
     assert client.get(f"/v1/missions/{mid}/run", headers=other).status_code == 404
