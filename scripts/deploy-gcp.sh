@@ -99,4 +99,18 @@ else
   echo "Application services are healthy. Caddy was not started; run again with --expose after approval."
 fi
 
+# CI supplies immutable image references through the process environment.
+# Record them only after the deployment is healthy so later Compose commands
+# continue to use the release that is actually running. Leave all credentials
+# and other production settings untouched.
+if [ -n "${OPERATOR_API_IMAGE:-}" ] || [ -n "${OPERATOR_WEB_IMAGE:-}" ]; then
+  : "${OPERATOR_API_IMAGE:?set OPERATOR_API_IMAGE}"
+  : "${OPERATOR_WEB_IMAGE:?set OPERATOR_WEB_IMAGE}"
+  grep -q '^OPERATOR_API_IMAGE=' "$env_file"
+  grep -q '^OPERATOR_WEB_IMAGE=' "$env_file"
+  sed -i "s|^OPERATOR_API_IMAGE=.*|OPERATOR_API_IMAGE=$OPERATOR_API_IMAGE|" "$env_file"
+  sed -i "s|^OPERATOR_WEB_IMAGE=.*|OPERATOR_WEB_IMAGE=$OPERATOR_WEB_IMAGE|" "$env_file"
+  chmod 600 "$env_file"
+fi
+
 compose ps
